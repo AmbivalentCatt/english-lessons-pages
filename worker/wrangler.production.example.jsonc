@@ -1,0 +1,21 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "replace-with-approved-worker-name",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-26",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "replace-with-approved-d1-name",
+      "database_id": "replace-after-cloudflare-account-selection",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "https://replace-with-final-github-pages-origin",
+    "TURNSTILE_EXPECTED_HOSTNAME": "replace-with-final-site-hostname",
+    "ACCESS_TEAM_DOMAIN": "https://replace-with-team-name.cloudflareaccess.com",
+    "ACCESS_AUD": "replace-after-access-application-creation"
+  }
+}

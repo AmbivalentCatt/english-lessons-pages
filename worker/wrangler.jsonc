@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "english-lessons-applications-local",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-26",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "applications-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "preview_database_id": "applications-local-preview",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGIN": "http://127.0.0.1:4173",
+    "TURNSTILE_EXPECTED_HOSTNAME": "127.0.0.1",
+    "ACCESS_TEAM_DOMAIN": "https://example.cloudflareaccess.com",
+    "ACCESS_AUD": "local-test-audience"
+  }
+}

@@ -1,0 +1,101 @@
+name: Verify and deploy GitHub Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Derive and validate public configuration
+        id: public-config
+        env:
+          CONFIGURED_API_BASE: ${{ vars.APPLICATION_API_BASE }}
+          CONFIGURED_PAGES_BASE: ${{ vars.PAGES_BASE }}
+          CONFIGURED_PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+          CONFIGURED_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+        run: |
+          repository_name="${GITHUB_REPOSITORY#*/}"
+          owner_name="${GITHUB_REPOSITORY%/*}"
+          if [ "${repository_name}" = "${owner_name}.github.io" ]; then
+            default_base="/"
+            default_url="https://${owner_name}.github.io"
+          else
+            default_base="/${repository_name}/"
+            default_url="https://${owner_name}.github.io/${repository_name}"
+          fi
+          pages_base="${CONFIGURED_PAGES_BASE:-${default_base}}"
+          public_site_url="${CONFIGURED_PUBLIC_SITE_URL:-${default_url}}"
+          if [ -z "${CONFIGURED_API_BASE}" ] || [ -z "${CONFIGURED_TURNSTILE_SITE_KEY}" ]; then
+            echo "Set repository variables APPLICATION_API_BASE and TURNSTILE_SITE_KEY before dispatching deployment." >&2
+            exit 1
+          fi
+          {
+            echo "pages_base=${pages_base}"
+            echo "public_site_url=${public_site_url}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Verify source and Worker
+        run: pnpm typecheck && pnpm lint && pnpm test
+
+      - name: Install browser engines
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Verify desktop, mobile, routes, motion, and form flow
+        run: pnpm test:e2e
+
+      - name: Build static Pages artifact
+        env:
+          GITHUB_PAGES_BASE: ${{ steps.public-config.outputs.pages_base }}
+          VITE_APPLICATION_API_BASE: ${{ vars.APPLICATION_API_BASE }}
+          VITE_PUBLIC_SITE_URL: ${{ steps.public-config.outputs.public_site_url }}
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+        run: pnpm build && pnpm verify:artifact
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload verified artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: verify-and-build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
