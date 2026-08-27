@@ -177,19 +177,6 @@ async function handleApplication(request: Request, env: Env, dependencies: Reque
 
   const now = dependencies.now();
   const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
-  const ipHash = await hmacHex(env.RATE_LIMIT_SALT, `ip:${ip}`);
-  const contactHash = await hmacHex(env.RATE_LIMIT_SALT, `contact:${validated.value.contactMethod}:${validated.value.contactValue.toLowerCase()}`);
-  const [ipLimit, contactLimit] = await Promise.all([
-    consumeRateLimit({ db: env.DB, keyHash: ipHash, limit: RATE_LIMIT_ATTEMPTS, now, windowMs: RATE_LIMIT_WINDOW_MS }),
-    consumeRateLimit({ db: env.DB, keyHash: contactHash, limit: RATE_LIMIT_ATTEMPTS, now, windowMs: RATE_LIMIT_WINDOW_MS }),
-  ]);
-  if (!ipLimit.allowed || !contactLimit.allowed) {
-    const retryAfterSeconds = Math.max(ipLimit.retryAfterSeconds, contactLimit.retryAfterSeconds);
-    return safePublicFailure(request, env, 429, "Слишком много попыток. Попробуйте позже.", "rate-limit", undefined, {
-      "Retry-After": String(retryAfterSeconds),
-    });
-  }
-
   const turnstile = await dependencies.verifyTurnstile({
     env,
     idempotencyKey: validated.value.idempotencyKey,
@@ -199,6 +186,33 @@ async function handleApplication(request: Request, env: Env, dependencies: Reque
   if (!turnstile.success) {
     return safePublicFailure(request, env, 422, "Защитная проверка не пройдена. Обновите её и повторите отправку.", "validation", {
       turnstileToken: "Пройдите защитную проверку ещё раз.",
+    });
+  }
+
+  const ipHash = await hmacHex(env.RATE_LIMIT_SALT, `ip:${ip}`);
+  const contactHash = await hmacHex(env.RATE_LIMIT_SALT, `contact:${validated.value.contactMethod}:${validated.value.contactValue.toLowerCase()}`);
+  const ipLimit = await consumeRateLimit({
+    db: env.DB,
+    keyHash: ipHash,
+    limit: RATE_LIMIT_ATTEMPTS,
+    now,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (!ipLimit.allowed) {
+    return safePublicFailure(request, env, 429, "Слишком много попыток. Попробуйте позже.", "rate-limit", undefined, {
+      "Retry-After": String(ipLimit.retryAfterSeconds),
+    });
+  }
+  const contactLimit = await consumeRateLimit({
+    db: env.DB,
+    keyHash: contactHash,
+    limit: RATE_LIMIT_ATTEMPTS,
+    now,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (!contactLimit.allowed) {
+    return safePublicFailure(request, env, 429, "Слишком много попыток. Попробуйте позже.", "rate-limit", undefined, {
+      "Retry-After": String(contactLimit.retryAfterSeconds),
     });
   }
 
@@ -298,7 +312,12 @@ export async function handleRequest(
   dependencies: RequestDependencies = defaultDependencies,
 ) {
   const url = new URL(request.url);
-  if (url.pathname.startsWith("/admin")) return handleAdmin(request, env, dependencies, url);
+  if (url.pathname.startsWith("/admin")) {
+    if (env.ADMIN_SURFACE_ENABLED !== "true") {
+      return json({ ok: false, message: "Protected access required." }, 403, adminHeaders());
+    }
+    return handleAdmin(request, env, dependencies, url);
+  }
 
   if (url.pathname === "/api/applications" || url.pathname === "/api/availability") {
     if (request.method === "OPTIONS") {

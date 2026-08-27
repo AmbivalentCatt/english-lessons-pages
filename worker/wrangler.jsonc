@@ -14,6 +14,7 @@
     }
   ],
   "vars": {
+    "ADMIN_SURFACE_ENABLED": "true",
     "ALLOWED_ORIGIN": "http://127.0.0.1:4173",
     "TURNSTILE_EXPECTED_HOSTNAME": "127.0.0.1",
     "ACCESS_TEAM_DOMAIN": "https://example.cloudflareaccess.com",

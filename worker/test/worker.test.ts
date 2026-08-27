@@ -112,6 +112,8 @@ describe("public API security and persistence", () => {
     expect(await response.text()).not.toContain("Synthetic Parent");
     const count = await env.DB.prepare("SELECT COUNT(*) AS count FROM applications").first<{ count: number }>();
     expect(count?.count).toBe(0);
+    const rateCount = await env.DB.prepare("SELECT COUNT(*) AS count FROM application_rate_limits").first<{ count: number }>();
+    expect(rateCount?.count).toBe(0);
   });
 
   it("stores an allowlisted application and returns only a public reference", async () => {
@@ -142,23 +144,39 @@ describe("public API security and persistence", () => {
     expect(count?.count).toBe(1);
   });
 
-  it("rate-limits repeated failed challenges by privacy-safe request dimensions", async () => {
+  it("rate-limits challenge-verified attempts without post-limit counter growth", async () => {
     for (let index = 0; index < 5; index += 1) {
       const response = await submit(syntheticPayload({
         idempotencyKey: crypto.randomUUID(),
-        turnstileToken: "synthetic-invalid-token",
+        contactValue: `synthetic-${index}@example.invalid`,
       }));
-      expect(response.status).toBe(422);
+      expect(response.status).toBe(201);
     }
     const limited = await submit(syntheticPayload({
       idempotencyKey: crypto.randomUUID(),
-      turnstileToken: "synthetic-invalid-token",
+      contactValue: "synthetic-limited@example.invalid",
     }));
     expect(limited.status).toBe(429);
     expect(limited.headers.get("Retry-After")).toBeTruthy();
-    const rateRow = await env.DB.prepare("SELECT key_hash FROM application_rate_limits LIMIT 1").first<{ key_hash: string }>();
+    const rateRow = await env.DB.prepare("SELECT key_hash, request_count FROM application_rate_limits ORDER BY request_count DESC LIMIT 1")
+      .first<{ key_hash: string; request_count: number }>();
     expect(rateRow?.key_hash).toMatch(/^[a-f0-9]{64}$/);
     expect(rateRow?.key_hash).not.toContain("192.0.2.44");
+    expect(rateRow?.request_count).toBe(5);
+    const rowsAtLimit = await env.DB.prepare("SELECT COUNT(*) AS count FROM application_rate_limits")
+      .first<{ count: number }>();
+
+    const limitedAgain = await submit(syntheticPayload({
+      idempotencyKey: crypto.randomUUID(),
+      contactValue: "synthetic-limited-again@example.invalid",
+    }));
+    expect(limitedAgain.status).toBe(429);
+    const saturated = await env.DB.prepare("SELECT MAX(request_count) AS count FROM application_rate_limits")
+      .first<{ count: number }>();
+    expect(saturated?.count).toBe(5);
+    const rowsAfterLimit = await env.DB.prepare("SELECT COUNT(*) AS count FROM application_rate_limits")
+      .first<{ count: number }>();
+    expect(rowsAfterLimit?.count).toBe(rowsAtLimit?.count);
   });
 });
 
@@ -172,6 +190,15 @@ describe("protected administration", () => {
     expect(await denied.text()).not.toContain("Synthetic Parent");
 
     const allowedHeaders = { "X-Synthetic-Admin": "allowed" };
+    const publicWorkerEnv = { ...env, ADMIN_SURFACE_ENABLED: "false" } as WorkerEnv;
+    const deniedOnPublicWorker = await handleRequest(
+      request("/admin/api/applications?limit=100", { headers: allowedHeaders }),
+      publicWorkerEnv,
+      dependencies,
+    );
+    expect(deniedOnPublicWorker.status).toBe(403);
+    expect(await deniedOnPublicWorker.text()).not.toContain("Synthetic Parent");
+
     const listed = await handleRequest(request("/admin/api/applications?limit=100", { headers: allowedHeaders }), env, dependencies);
     expect(listed.status).toBe(200);
     const listBody = await listed.json<{ applications: Array<{ publicReference: string }> }>();

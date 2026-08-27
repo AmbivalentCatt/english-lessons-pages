@@ -8,5 +8,8 @@ test-results/
 .env.*
 !.env.example
 worker/.dev.vars
+worker/.dev.vars.*
+!worker/.dev.vars.example
 worker/wrangler.production.jsonc
+worker/wrangler.admin.production.jsonc
 worker/worker-configuration.d.ts

@@ -21,6 +21,18 @@ export async function consumeRateLimit(input: {
 }) {
   const nowMs = input.now.getTime();
   const windowStartedAt = Math.floor(nowMs / input.windowMs) * input.windowMs;
+  const existing = await input.db.prepare(`
+    SELECT request_count
+    FROM application_rate_limits
+    WHERE key_hash = ?1 AND window_started_at = ?2
+    LIMIT 1
+  `).bind(input.keyHash, windowStartedAt).first<{ request_count: number }>();
+  if (existing && existing.request_count >= input.limit) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((windowStartedAt + input.windowMs - nowMs) / 1000)),
+    };
+  }
   const row = await input.db.prepare(`
     INSERT INTO application_rate_limits (key_hash, window_started_at, request_count, updated_at)
     VALUES (?1, ?2, 1, ?3)

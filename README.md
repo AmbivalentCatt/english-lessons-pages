@@ -2,12 +2,12 @@
 
 This directory is a publication-independent migration of the exact latest accepted English-lessons Sites deployment. It preserves the existing visual site and moves only the application persistence boundary to a separately deployed Cloudflare Worker with D1.
 
-Nothing in this package deploys automatically. The Pages workflow is manual-only (`workflow_dispatch`), the production Wrangler configuration is intentionally absent, and no Cloudflare account identifiers, credentials, Access policy, DNS records, repository destination, or production domain have been chosen.
+Nothing in this package deploys automatically. The Pages workflow is manual-only (`workflow_dispatch`). Production Wrangler files and all secrets remain ignored. The approved zero-purchase deployment uses a public GitHub Pages project site and two free `workers.dev` Workers: one public application API and one Cloudflare Access-protected admin surface.
 
 ## Architecture
 
 - `src/`, `public/`: static React/Vite site, including the accepted responsive layout, animation sequence, images, video assets, poster fallbacks, application dialog, and contact/booking flow.
-- `worker/src/`: public application API and private admin surface.
+- `worker/src/`: shared application API and private admin implementation, deployed as separate public-API and Access-protected admin Workers.
 - `worker/migrations/`: versioned D1 schema.
 - `.github/workflows/deploy-pages.yml`: manual GitHub Pages build, verification, artifact upload, and deployment.
 - `tests/`, `worker/test/`: static contracts, Worker/D1 integration tests, and desktop/mobile browser checks.
@@ -18,7 +18,7 @@ The public frontend calls only:
 - `GET /api/availability`
 - `POST /api/applications`
 
-The Worker serves the authenticated admin UI and JSON API under `/admin`. Cloudflare Access must protect that path, and the Worker independently validates the Access JWT issuer, audience, signature, and expiration before disclosing data.
+The dedicated admin Worker serves the authenticated admin UI and JSON API under `/admin`. Cloudflare Access protects its complete hostname, and the Worker independently validates the Access JWT issuer, audience, signature, and expiration before disclosing data. The public API Worker is not an admin entry point: `ADMIN_SURFACE_ENABLED=false` denies its `/admin` routes before JWT evaluation.
 
 ## Local verification
 

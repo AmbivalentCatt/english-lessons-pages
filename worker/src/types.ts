@@ -10,6 +10,7 @@ export type ApplicationStatus = "new" | "contacted" | "lesson_booked" | "closed"
 export type Env = {
   ACCESS_AUD: string;
   ACCESS_TEAM_DOMAIN: string;
+  ADMIN_SURFACE_ENABLED: string;
   ALLOWED_ORIGIN: string;
   DB: D1Database;
   RATE_LIMIT_SALT: string;

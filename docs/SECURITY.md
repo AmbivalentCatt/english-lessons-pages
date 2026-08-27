@@ -12,9 +12,11 @@ Controls implemented server-side:
 - an invisible honeypot field with a generic failure;
 - mandatory Turnstile token verification through Cloudflare Siteverify;
 - expected Turnstile action and hostname checks;
+- Turnstile verification before any D1-backed rate-limit mutation, so failed challenges cannot consume another applicant's allowance or create durable rate rows;
 - random UUID idempotency key, stored only as a keyed HMAC;
 - idempotent replay of an identical saved request and rejection of mismatched key reuse;
-- per-IP and per-contact rolling-window limits, with only keyed HMACs stored in D1;
+- per-IP and per-contact fixed-window limits, with only keyed HMACs stored in D1;
+- counters that stop writing after the fixed-window threshold is reached;
 - safe public error bodies that contain no applicant payload, stack, credential, or database detail;
 - no applicant-value logging in application code;
 - D1 unique constraints for public references and idempotency hashes.
@@ -38,11 +40,11 @@ Raw IP addresses and rate-limit contact values are not stored in rate-limit rows
 
 ## Protected administration
 
-The admin UI and admin JSON API live on the Worker under `/admin`. There is no client-side password, shared secret in JavaScript, or local-storage credential.
+The admin UI and admin JSON API live under `/admin` on a dedicated admin Worker. There is no client-side password, shared secret in JavaScript, or local-storage credential. The public application API and the admin surface use distinct Worker hostnames so that Access can protect the entire admin hostname without blocking public form submissions.
 
-Production requires a Cloudflare Access self-hosted application and an identity policy restricted to the approved operator identity. Access is the outer gate. The Worker is the second gate: it validates `Cf-Access-Jwt-Assertion` against the configured Access team issuer and public JWKS, and requires the configured application audience. Cloudflare’s documented JWT validation requirements are here: [Validate Access tokens](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/).
+Production requires a Cloudflare Access self-hosted application covering the dedicated admin Worker hostname and an identity policy restricted to the approved operator identity. Access is the outer gate. The Worker is the second gate: it validates `Cf-Access-Jwt-Assertion` against the configured Access team issuer and public JWKS, and requires the configured application audience. `ADMIN_SURFACE_ENABLED` is `true` only on the dedicated admin Worker; the public API Worker returns a protected-access denial before attempting JWT validation. Cloudflare’s documented JWT validation requirements are here: [Validate Access tokens](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/).
 
-Until the exact Cloudflare account, Access team domain, Access application audience, and allowed operator identity are approved and created, the protected admin path is locally complete but cannot be accepted as production-accessible.
+Deployment acceptance requires direct readback of the exact Cloudflare account, Access team domain, Access application audience, allowed operator identity, unauthenticated redirect, authenticated access, and Worker-side JWT validation. Merely creating the Access application is not protected-admin acceptance.
 
 ## Browser and response hardening
 
@@ -60,6 +62,7 @@ Until the exact Cloudflare account, Access team domain, Access application audie
 - `.env` and `.env.*` except `.env.example`;
 - `.dev.vars` and `.dev.vars.*` except the example;
 - `worker/wrangler.production.jsonc`;
+- `worker/wrangler.admin.production.jsonc`;
 - local Wrangler/D1 state, test artifacts, and browser traces.
 
 Never paste or commit a secret to “test” the scanner. Rotate immediately through the provider if a secret is ever exposed.

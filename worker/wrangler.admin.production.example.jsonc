@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/wrangler/config-schema.json",
-  "name": "replace-with-approved-worker-name",
+  "name": "replace-with-approved-admin-worker-name",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-26",
   "workers_dev": true,
@@ -13,7 +13,7 @@
     }
   ],
   "vars": {
-    "ADMIN_SURFACE_ENABLED": "false",
+    "ADMIN_SURFACE_ENABLED": "true",
     "ALLOWED_ORIGIN": "https://replace-with-final-github-pages-origin",
     "TURNSTILE_EXPECTED_HOSTNAME": "replace-with-final-site-hostname",
     "ACCESS_TEAM_DOMAIN": "https://replace-with-team-name.cloudflareaccess.com",

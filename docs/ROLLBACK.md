@@ -9,11 +9,11 @@
 
 Do not point traffic back by modifying the existing Sites deployment. The live Sites project remains independent and unchanged.
 
-## Worker
+## Workers and Access
 
-Cloudflare supports rolling back to a previous deployed Worker version: [Workers rollbacks](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/). Record deployed Worker version IDs at acceptance time so the target is unambiguous.
+Cloudflare supports rolling back to a previous deployed Worker version: [Workers rollbacks](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/). Record accepted version IDs separately for the public API Worker and dedicated admin Worker; never assume that one version identifies both surfaces.
 
-Before rollback, check whether the target Worker expects the currently applied D1 schema. Worker rollback does not undo D1 migrations or application data.
+Before rollback, check whether both target Workers expect the currently applied D1 schema. Worker rollback does not undo D1 migrations or application data. Keep the admin Worker behind the existing Access application throughout rollback. If Access itself is the incident source, deny the Access policy or remove the admin destination before changing application logic; do not expose the admin Worker as a troubleshooting shortcut.
 
 ## D1
 

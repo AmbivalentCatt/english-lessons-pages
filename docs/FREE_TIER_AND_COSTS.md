@@ -10,7 +10,7 @@ This package’s large media assets count toward repository and Pages artifact s
 
 ## Cloudflare Workers
 
-Cloudflare’s current Workers Free limits include 100,000 requests per day, 10 ms CPU time per HTTP request, 128 MB memory per isolate, and 50 subrequests per invocation: [Workers limits](https://developers.cloudflare.com/workers/platform/limits/). The API is designed for short validation, HMAC, Turnstile verification, JWT verification, and D1 queries within those limits.
+Cloudflare’s current Workers Free limits include 100,000 requests per day, 10 ms CPU time per HTTP request, 128 MB memory per isolate, and 50 subrequests per invocation: [Workers limits](https://developers.cloudflare.com/workers/platform/limits/). The public API and dedicated admin surface are separate Workers. They are designed for short validation, HMAC, Turnstile verification, JWT verification, and D1 queries within those limits; requests to both Workers count toward the account's applicable allowance.
 
 On Free, hitting a service limit can cause rejected/failed requests. Cost is introduced if the account is explicitly upgraded to a paid Workers plan or another paid product is enabled; do not upgrade without separate approval.
 
@@ -22,7 +22,7 @@ The application endpoint writes one application plus two small rate-limit counte
 
 ## Turnstile and Access
 
-Turnstile has a free plan suitable for the public form: [Turnstile overview](https://developers.cloudflare.com/turnstile/get-started/). The selected Cloudflare Access configuration must also be checked against the approved account’s current Zero Trust plan and user allowance before external creation.
+Turnstile has a free plan suitable for the public form: [Turnstile overview](https://developers.cloudflare.com/turnstile/get-started/). The admin Worker uses the activated Zero Trust Free plan, one operator-only Access policy, and a 30-minute application session. Zero-cost operation assumes the account remains within the current Free user and request allowances. Do not accept a checkout, upgrade, add paid seats, or enable a paid Zero Trust add-on without separate approval.
 
 ## Conditions that can introduce cost
 
