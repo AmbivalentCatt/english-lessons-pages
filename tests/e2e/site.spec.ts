@@ -15,9 +15,9 @@ async function installSyntheticNetwork(page: Page) {
           tariffs: {
             basic: { label: "Осталось мест", remaining: 3, status: "fresh" },
             standard: { label: "Осталось мест", remaining: 5, status: "fresh" },
-            premium: { label: "Осталось мест", remaining: 3, status: "fresh" },
+            premium: { label: "Осталось мест", remaining: 2, status: "fresh" },
           },
-          verifiedAt: "2026-08-30T11:35:42+03:00",
+          verifiedAt: "2026-08-30T20:20:00+03:00",
         },
       }),
     });

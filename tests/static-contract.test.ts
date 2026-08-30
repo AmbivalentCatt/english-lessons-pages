@@ -16,7 +16,7 @@ describe("static migration contract", () => {
 
   it("publishes the user-approved remaining-place ledger without changing capacity", () => {
     expect(CURRENT_AVAILABILITY_SNAPSHOT.capacities).toEqual({ basic: 5, standard: 7, premium: 4 });
-    expect(CURRENT_AVAILABILITY_SNAPSHOT.remaining).toEqual({ basic: 3, standard: 5, premium: 3 });
+    expect(CURRENT_AVAILABILITY_SNAPSHOT.remaining).toEqual({ basic: 3, standard: 5, premium: 2 });
   });
 
   it("uses the separate Worker API and mandatory Turnstile flow", async () => {
