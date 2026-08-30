@@ -52,7 +52,9 @@ test("loads the repository subpath with local assets and no leaking root asset r
   });
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await expect(page.locator("main")).toBeVisible();
-  await expect(page.getByText("LEARNING IN MOTION", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.locator('[data-reveal-state="complete"] header').getByText("LEARNING IN MOTION", { exact: true }),
+  ).toBeVisible();
   await expect.poll(() => rootAssetRequests).toEqual([]);
   const localResponses = await page.locator("img").evaluateAll((images) => images.slice(0, 8).map((image) => (image as HTMLImageElement).currentSrc));
   expect(localResponses.some((src) => src.includes(`${basePath}media/`))).toBe(true);
@@ -68,7 +70,9 @@ test("serves the accepted legacy deep link and custom 404 shell after refresh", 
   expect(await fallback.text()).toContain("<div id=\"root\"></div>");
 
   await page.goto(`${basePath}liquid-scroll-lab/reference-v7-micro-fidelity/`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("LEARNING IN MOTION", { exact: true }).first()).toBeVisible();
+  await expect(
+    page.locator('[data-reveal-state="complete"] header').getByText("LEARNING IN MOTION", { exact: true }),
+  ).toBeVisible();
 });
 
 test("keeps the application modal keyboard reachable and submits only after Turnstile", async ({ page }) => {
