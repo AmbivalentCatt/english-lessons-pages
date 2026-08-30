@@ -589,9 +589,9 @@ const blockCells = Array.from({ length: 18 }, (_, index) => {
 });
 
 const availabilityByTier = {
-  basic: 5,
-  standard: 7,
-  premium: 4,
+  basic: 3,
+  standard: 5,
+  premium: 3,
 } satisfies Record<TariffId, number>;
 
 const preparationToolsByTier = {
