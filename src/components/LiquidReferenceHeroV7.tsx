@@ -590,7 +590,7 @@ const blockCells = Array.from({ length: 18 }, (_, index) => {
 
 const availabilityByTier = {
   basic: 3,
-  standard: 4,
+  standard: 2,
   premium: 2,
 } satisfies Record<TariffId, number>;
 
