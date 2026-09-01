@@ -152,13 +152,13 @@ export const CURRENT_OFFER: OfferCatalog = Object.freeze({
 });
 
 export const CURRENT_AVAILABILITY_SNAPSHOT: AvailabilitySnapshot = Object.freeze({
-  snapshotId: "availability-20260901-standard-capacity-full-0-of-7",
+  snapshotId: "availability-20260901-basic-slot-confirmed-2-of-5",
   unit: "remaining-active-student-places",
   source: "manual-user-approved-ledger",
-  verifiedAt: "2026-09-01T15:18:09+03:00",
+  verifiedAt: "2026-09-01T20:32:16+03:00",
   freshnessDays: 7,
   capacities: Object.freeze({ basic: 5, standard: 7, premium: 4 }),
-  remaining: Object.freeze({ basic: 3, standard: 0, premium: 2 }),
+  remaining: Object.freeze({ basic: 2, standard: 0, premium: 2 }),
 });
 
 export const CURRENT_CAPACITY_TOTAL = Object.values(CURRENT_AVAILABILITY_SNAPSHOT.capacities)
