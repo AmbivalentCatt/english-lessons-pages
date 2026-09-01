@@ -14,10 +14,10 @@ async function installSyntheticNetwork(page: Page) {
           fresh: true,
           tariffs: {
             basic: { label: "Осталось мест", remaining: 3, status: "fresh" },
-            standard: { label: "Осталось мест", remaining: 2, status: "fresh" },
+            standard: { label: "Осталось мест", remaining: 1, status: "fresh" },
             premium: { label: "Осталось мест", remaining: 2, status: "fresh" },
           },
-          verifiedAt: "2026-08-31T12:25:42+03:00",
+          verifiedAt: "2026-09-01T08:49:05+03:00",
         },
       }),
     });
