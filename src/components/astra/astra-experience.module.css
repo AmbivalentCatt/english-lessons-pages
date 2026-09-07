@@ -1,0 +1,55 @@
+.dock {
+  --reading-progress: 0;
+  position: fixed;
+  z-index: 70;
+  top: 22px;
+  right: 28px;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 3px;
+  width: 420px;
+  padding: 5px;
+  overflow: hidden;
+  border-radius: 18px;
+  color: #d3f3f4;
+  background: rgb(4 24 35 / 90%);
+  box-shadow: 0 12px 28px rgb(1 10 20 / 18%);
+  backdrop-filter: blur(12px);
+  font-family: Arial, Helvetica, sans-serif;
+}
+.dock button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 8px 3px;
+  border-radius: 12px;
+  color: #d3f3f4;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+.dock button[aria-current] { color: #fff; background: rgb(211 243 244 / 18%); }
+.dock button.booking { background: #d3f3f4; color: #052b32; }
+.dock button:focus-visible { outline: 2px solid #ff987c; outline-offset: -3px; }
+.progress { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #7fdecf; transform: scaleX(var(--reading-progress)); transform-origin: left; pointer-events: none; }
+@media (hover: hover) {
+  .dock button:hover { color: #fff; background: rgb(211 243 244 / 26%); }
+  .dock button.booking:hover { color: #052b32; background: #7fdecf; }
+}
+@media (max-width: 899px) {
+  .dock { top: max(8px, env(safe-area-inset-top)); right: auto; left: 50%; transform: translateX(-50%); flex-direction: row; width: calc(100% - 16px); max-width: 440px; border-radius: 15px; gap: 2px; padding: 4px; }
+  .dock button { flex: 1; min-width: 0; padding: 7px 4px; font-size: 11px; }
+  .dock svg { display: none; }
+  .progress { top: auto; bottom: 0; width: 100%; height: 2px; transform: scaleX(var(--reading-progress)); transform-origin: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock button { transition: none; }
+  .dock button:nth-of-type(n+2):nth-of-type(-n+4) { display: none; }
+}

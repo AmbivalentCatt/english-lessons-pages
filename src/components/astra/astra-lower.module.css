@@ -1,0 +1,493 @@
+/* Preserve the approved open form. Only its entrance is stabilized. */
+.backdrop.backdrop { animation: none; opacity: 1; }
+.dialog.dialog { animation: none; transition: none; opacity: 1; transform: none; }
+.dialogBody.dialogBody { animation: none; transition: none; opacity: 1; transform: none; }
+
+.story.story {
+  min-height: 280svh;
+}
+
+.storyStage {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: clamp(40px, 6vw, 100px);
+  min-height: 100svh;
+  padding: clamp(36px, 5.5vh, 72px) clamp(24px, 5vw, 80px);
+}
+
+.storyCopy {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+}
+
+.storyHeading h2 {
+  max-width: 10.5ch;
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(48px, 5.5vw, 84px);
+  font-weight: 600;
+  line-height: .98;
+  letter-spacing: -.065em;
+  text-wrap: balance;
+}
+
+.storyHeading p {
+  min-height: 7.7em;
+  max-width: 42ch;
+  margin: 28px 0 24px;
+  color: #d9e8f4;
+  font-size: clamp(15px, 1.22vw, 18px);
+  line-height: 1.55;
+}
+
+.storySteps {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.storySteps li {
+  border-top: 1px solid rgb(214 237 255 / .25);
+}
+
+.storySteps li:last-child {
+  border-bottom: 1px solid rgb(214 237 255 / .25);
+}
+
+.storySteps button {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 80px;
+  padding: 18px 0;
+  border: 0;
+  background: transparent;
+  color: #aec6dc;
+  text-align: left;
+  cursor: pointer;
+  transition: color 180ms;
+}
+
+.storySteps strong {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(19px, 1.9vw, 28px);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -.04em;
+}
+
+.stepNumber {
+  color: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.storySteps svg {
+  width: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  opacity: .35;
+  transform: translateX(-4px);
+  transition: transform 180ms, opacity 180ms;
+}
+
+.storySteps li[data-active="true"] button,
+.storySteps button:hover {
+  color: #fff;
+}
+
+.storySteps li[data-active="true"] .stepNumber {
+  color: #c9f19b;
+}
+
+.storySteps li[data-active="true"] svg,
+.storySteps button:hover svg {
+  opacity: 1;
+  transform: none;
+}
+
+.storySteps button:focus-visible,
+.choiceActions.choiceActions > :focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 6px;
+}
+
+.storyVisual {
+  position: relative;
+  height: min(80svh, 820px);
+  min-height: 540px;
+  perspective: 1200px;
+}
+
+.storyVisual::before {
+  position: absolute;
+  inset: 14px -13px -14px 13px;
+  border: 1px solid rgb(205 234 255 / .25);
+  border-radius: 16px;
+  content: "";
+}
+
+.storyVisual figure {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  margin: 0;
+  padding: clamp(24px, 3vw, 48px);
+  overflow: hidden;
+  border: 1px solid rgb(221 245 255 / .6);
+  border-radius: 16px;
+  background: #bce8f5;
+  color: #082a50;
+  box-shadow: 0 30px 64px rgb(1 12 40 / .22);
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(12px) scale(.985);
+  transition: opacity 280ms, transform 450ms cubic-bezier(.2,.75,.25,1), visibility 450ms;
+}
+
+.storyVisual figure[data-active="true"] {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+}
+
+.storyArtwork {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+}
+
+.storyArtwork img {
+  object-fit: cover;
+}
+
+.visualStep {
+  position: relative;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.visualStep > span {
+  margin-left: 6px;
+  opacity: .55;
+}
+
+.storyVisual figcaption {
+  position: absolute;
+  right: clamp(24px, 3vw, 48px);
+  bottom: clamp(28px, 3.5vw, 56px);
+  left: clamp(24px, 3vw, 48px);
+  display: grid;
+  gap: 12px;
+}
+
+.storyVisual figcaption strong {
+  max-width: 12ch;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(32px, 4vw, 62px);
+  font-weight: 600;
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+
+.storyVisual figcaption > span {
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: .05em;
+}
+
+.storyVisual figure[data-kind="formats"] figcaption strong {
+  display: none;
+}
+
+.formatStack {
+  position: absolute;
+  top: 23%;
+  right: 8%;
+  left: 8%;
+  display: grid;
+  gap: 16px;
+  transform: rotate(-5deg);
+}
+
+.formatStack > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: clamp(20px, 2.4vw, 34px) clamp(18px, 2.4vw, 34px);
+  border: 1px solid rgb(255 255 255 / .85);
+  border-radius: 8px;
+  background: rgb(247 255 227 / .86);
+  box-shadow: 4px 14px 20px rgb(9 44 69 / .14);
+  color: #123a31;
+}
+
+.formatStack > div[data-tier="standard"] {
+  transform: translateX(-12px);
+  background: rgb(227 250 255 / .9);
+  color: #073961;
+}
+
+.formatStack > div[data-tier="premium"] {
+  transform: translateX(10px);
+  background: rgb(19 40 76 / .96);
+  color: #f7ecff;
+}
+
+.formatStack strong {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(22px, 2.4vw, 36px);
+  font-weight: 600;
+  letter-spacing: -.035em;
+}
+
+.formatStack span {
+  font-size: clamp(12px, 1.1vw, 16px);
+  white-space: nowrap;
+}
+
+.materialWords {
+  position: absolute;
+  top: 22%;
+  right: 8%;
+  left: 8%;
+  display: grid;
+  gap: 16px;
+  color: #06386b;
+}
+
+.materialWords span {
+  width: fit-content;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgb(8 62 112 / .35);
+  font-size: clamp(27px, 3.4vw, 50px);
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.materialWords span:nth-child(2) {
+  margin-left: 14%;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: clamp(40px, 4.6vw, 68px);
+}
+
+.materialWords span:nth-child(3) {
+  margin-left: 28%;
+}
+
+.storyVisual figure[data-kind="booking"] {
+  color: #fff;
+}
+
+.storyVisual figure[data-kind="booking"]::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(4 24 68 / .15), transparent 35%, rgb(3 17 54 / .58));
+  content: "";
+}
+
+.choiceSection.choiceSection {
+  --choice-x: 0;
+  --choice-y: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: center;
+  gap: clamp(44px, 6vh, 80px);
+  min-height: 100svh;
+  padding: clamp(64px, 8vh, 104px) clamp(24px, 5vw, 80px);
+  overflow: hidden;
+  perspective: 1300px;
+}
+
+.choiceHeading {
+  transform: translate3d(calc(var(--choice-x) * 13px), calc(var(--choice-y) * 8px), 0) rotateY(calc(var(--choice-x) * 1.4deg)) rotateX(calc(var(--choice-y) * -.8deg));
+  transform-origin: 30% 70%;
+}
+
+.choiceSection.choiceSection .choiceHeading h2 {
+  max-width: none;
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(64px, 8.6vw, 140px);
+  font-weight: 600;
+  line-height: .96;
+  letter-spacing: -.07em;
+  text-wrap: unset;
+}
+
+.choiceSection.choiceSection .choiceHeading h2 > span {
+  display: block;
+}
+
+.choiceSection.choiceSection .choiceHeading h2 > span:last-child {
+  margin-left: 8%;
+  color: #285642;
+}
+
+.choiceActions.choiceActions {
+  width: min(100%, 760px);
+  margin-left: auto;
+  border-top: 1px solid rgb(32 69 50 / .45);
+  transform: translate3d(calc(var(--choice-x) * -9px), calc(var(--choice-y) * -5px), 0);
+}
+
+.choiceActions.choiceActions > a,
+.choiceActions.choiceActions > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 24px;
+  min-height: 100px;
+  padding: 18px 16px;
+  border-bottom: 1px solid rgb(32 69 50 / .4);
+  background: rgb(251 255 231 / .18);
+  color: #163929;
+  text-decoration: none;
+  transition: background 180ms;
+}
+
+.choiceActions.choiceActions > button {
+  background: rgb(247 255 225 / .6);
+}
+
+.choiceActions.choiceActions > a:hover,
+.choiceActions.choiceActions > button:hover {
+  background: rgb(251 255 234 / .76);
+}
+
+.choiceActions.choiceActions > a > span,
+.choiceActions.choiceActions > button > span {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(25px, 2.8vw, 40px);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -.045em;
+}
+
+.choiceActions small {
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: .08em;
+}
+
+.choiceActions svg {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+}
+
+@media (max-width: 1100px) and (min-width: 900px) {
+  .storyStage { gap: 32px; padding-inline: 32px; }
+  .storyHeading h2 { font-size: 58px; }
+  .storyHeading p { min-height: 9.3em; font-size: 15px; }
+  .storyVisual { min-height: 560px; }
+  .formatStack > div { flex-direction: column; gap: 5px; padding: 20px; }
+}
+
+@media (max-width: 899px) {
+  .dialog.dialog { padding: 22px 18px; border-radius: 14px; }
+  .dialogHeading.dialogHeading h2 { font-size: clamp(34px, 8vw, 48px); }
+  .story.story { min-height: 240svh; }
+  .storyStage {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: center;
+    gap: 24px;
+    height: 100svh;
+    padding: 88px 22px 24px;
+  }
+  .storyHeading h2 { max-width: 19ch; font-size: clamp(33px, 6.2vw, 52px); line-height: 1.01; }
+  .storyHeading p { min-height: 6.2em; margin: 16px 0 16px; max-width: 62ch; font-size: 14px; line-height: 1.45; }
+  .storySteps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .storySteps li:last-child { border-bottom: 0; }
+  .storySteps button { grid-template-columns: 1fr; gap: 10px; min-height: 82px; padding: 12px 0 0; align-content: start; }
+  .storySteps strong { font-size: 15px; line-height: 1.13; letter-spacing: -.035em; }
+  .stepNumber { font-size: 12px; }
+  .storySteps svg { display: none; }
+  .storyVisual { width: 100%; height: 100%; min-height: 260px; max-height: 540px; }
+  .storyVisual figure { padding: 22px; }
+  .storyVisual::before { inset: 8px -8px -8px 8px; }
+  .visualStep { font-size: 14px; }
+  .storyVisual figcaption { right: 22px; bottom: 22px; left: 22px; gap: 8px; }
+  .storyVisual figcaption strong { max-width: 15ch; font-size: clamp(28px, 6vw, 40px); }
+  .storyVisual figcaption > span { font-size: 10px; }
+  .formatStack { top: 18%; gap: 9px; }
+  .formatStack > div { padding: 14px 18px; }
+  .formatStack strong { font-size: 22px; }
+  .formatStack span { font-size: 12px; }
+  .materialWords { top: 18%; gap: 10px; }
+  .materialWords span { padding: 5px 10px; font-size: 27px; }
+  .materialWords span:nth-child(2) { font-size: 40px; }
+  .choiceSection.choiceSection { gap: 48px; min-height: 90svh; padding: 72px 22px; }
+  .choiceSection.choiceSection .choiceHeading h2 { font-size: clamp(43px, 9.2vw, 74px); line-height: 1.02; letter-spacing: -.063em; }
+  .choiceSection.choiceSection .choiceHeading h2 > span:last-child { margin-left: 3%; }
+  .choiceActions.choiceActions { width: 100%; }
+  .choiceActions.choiceActions > a,
+  .choiceActions.choiceActions > button { gap: 12px; min-height: 94px; padding: 18px 8px; grid-template-columns: minmax(0, 1fr) 32px; }
+  .choiceActions.choiceActions > a > span,
+  .choiceActions.choiceActions > button > span { display: block; font-size: clamp(25px, 5.4vw, 34px); }
+  .choiceActions small { display: block; margin-top: 6px; }
+  .choiceActions svg { width: 28px; height: 28px; }
+}
+
+@media (max-height: 730px) and (max-width: 899px) {
+  .storyStage { gap: 16px; padding-block: 76px 18px; }
+  .storyHeading h2 { font-size: 31px; }
+  .storyHeading p { min-height: 6em; margin: 12px 0; font-size: 12px; }
+  .storySteps button { min-height: 74px; }
+  .storyVisual { min-height: 210px; }
+  .formatStack { top: 18%; gap: 7px; }
+  .formatStack > div { padding: 10px 14px; }
+  .formatStack strong { font-size: 18px; }
+  .materialWords { top: 16%; gap: 3px; }
+  .materialWords span { font-size: 22px; }
+  .materialWords span:nth-child(2) { font-size: 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story.story { min-height: auto; }
+  .storyStage { position: relative; }
+  .storyVisual figure,
+  .storySteps button,
+  .storySteps svg,
+  .choiceActions.choiceActions > a,
+  .choiceActions.choiceActions > button { transition: none; }
+  .storyVisual figure,
+  .choiceHeading,
+  .choiceActions.choiceActions { transform: none; }
+}
+
+/* Art carries the three-step visual: no extra words or mixed display fonts. */
+.storyVisual { height: min(70svh, 680px); min-height: 440px; align-self: center; perspective: 1100px; }
+.storyVisual::before { display: none; }
+.storyVisual figure { border: 0; background: transparent; box-shadow: none; overflow: visible; }
+.storyArtwork { inset: 6% 6%; border-radius: 20px; overflow: hidden; box-shadow: 18px 30px 60px rgb(2 18 48 / .24); }
+.storyArtwork img { object-fit: cover; }
+.storyVisual figure[data-kind="formats"] > .storyArtwork { display: none; }
+.storyVisual figure[data-kind="materials"] > .storyArtwork { inset: 8% 10%; transform: rotate(3deg); }
+.storyVisual figure[data-kind="booking"] > .storyArtwork { inset: 10% 1%; transform: rotate(-2deg); }
+.storyVisual figure[data-kind="booking"]::after { display: none; }
+.formatPortraits { position: absolute; inset: 0; perspective: 1100px; }
+.formatPortraits > div { position: absolute; top: 13%; width: 37%; aspect-ratio: 9 / 18; overflow: hidden; border: 1px solid rgb(221 246 255 / .6); border-radius: 24px; box-shadow: 12px 26px 45px rgb(5 18 40 / .3); }
+.formatPortraits img { object-fit: cover; }
+.formatPortraits > div:nth-child(1) { left: 0; transform: translateY(8%) rotate(-12deg); }
+.formatPortraits > div:nth-child(2) { z-index: 2; left: 31%; transform: translateY(-6%); }
+.formatPortraits > div:nth-child(3) { left: 61%; transform: translateY(6%) rotate(12deg); }
+@media (max-width: 899px) { .storyVisual { min-height: 240px; height: 100%; } .storyArtwork { inset: 0 6%; } .formatPortraits > div { width: 30%; top: 5%; max-height: 94%; border-radius: 16px; } .formatPortraits > div:nth-child(1) { left: 10%; } .formatPortraits > div:nth-child(2) { left: 35%; } .formatPortraits > div:nth-child(3) { left: 60%; } }
+@media (prefers-reduced-motion: reduce) { .storyVisual figure, .storyArtwork, .formatPortraits > div { transform: none !important; } }

@@ -3238,11 +3238,14 @@
   inset: 0;
 }
 
-.violetMedallions i {
+.violetMedallions .utilityDepthRig {
   position: absolute;
-  display: flex;
   width: clamp(9rem, 18vw, 18rem);
   height: clamp(7rem, 18vh, 11rem);
+}
+
+.violetMedallions i {
+  display: flex;
   align-items: center;
   flex-direction: column;
   justify-content: center;
@@ -3291,22 +3294,98 @@
   text-shadow: none;
 }
 
-.violetMedallions i:nth-child(1) { top: 8%; left: 4%; background-color: rgb(255 190 160 / 78%); }
-.violetMedallions i:nth-child(2) { bottom: 9%; left: 8%; background-color: rgb(255 235 207 / 76%); }
-.violetMedallions i:nth-child(3) { top: 7%; right: 20%; background-color: rgb(176 241 244 / 78%); }
-.violetMedallions i:nth-child(4) { right: 6%; bottom: 8%; background-color: rgb(128 198 246 / 76%); }
-.violetMedallions i:nth-child(5) { top: 38%; right: 10%; width: clamp(8rem, 14vw, 13rem); background-color: rgb(190 246 233 / 82%); }
-.violetMedallions i:nth-child(6) { top: 38%; left: 2%; width: clamp(8rem, 14vw, 13rem); background-color: rgb(29 72 160 / 82%); color: #fff; }
-.violetMedallions i:nth-child(7) { bottom: -2%; left: 43%; width: clamp(7rem, 12vw, 11rem); background-color: rgb(16 74 125 / 78%); color: #fff; }
-.violetMedallions i:nth-child(8) { top: 20%; left: 27%; width: clamp(7rem, 11vw, 10rem); height: clamp(5.5rem, 13vh, 8rem); background-color: rgb(163 232 238 / 84%); }
-.violetMedallions i:nth-child(9) { right: 36%; bottom: 20%; width: clamp(7.5rem, 12vw, 11rem); height: clamp(5.5rem, 13vh, 8rem); background-color: rgb(113 91 185 / 84%); color: #fff; }
+.violetMedallions .utilityDepthRig:nth-child(1) {
+  top: 8%;
+  left: 4%;
+}
 
-.violetMedallions i[data-utility="speaking"] {
+.violetMedallions .utilityDepthRig:nth-child(1) > i {
+  background-color: rgb(255 190 160 / 78%);
+}
+.violetMedallions .utilityDepthRig:nth-child(2) {
+  bottom: 9%;
+  left: 8%;
+}
+
+.violetMedallions .utilityDepthRig:nth-child(2) > i {
+  background-color: rgb(255 235 207 / 76%);
+}
+.violetMedallions .utilityDepthRig:nth-child(3) {
+  top: 7%;
+  right: 20%;
+}
+
+.violetMedallions .utilityDepthRig:nth-child(3) > i {
+  background-color: rgb(176 241 244 / 78%);
+}
+.violetMedallions .utilityDepthRig:nth-child(4) {
+  right: 6%;
+  bottom: 8%;
+}
+
+.violetMedallions .utilityDepthRig:nth-child(4) > i {
+  background-color: rgb(128 198 246 / 76%);
+}
+.violetMedallions .utilityDepthRig:nth-child(5) {
+  top: 38%;
+  right: 10%;
+  width: clamp(8rem, 14vw, 13rem);
+}
+
+.violetMedallions .utilityDepthRig:nth-child(5) > i {
+  background-color: rgb(190 246 233 / 82%);
+}
+.violetMedallions .utilityDepthRig:nth-child(6) {
+  top: 38%;
+  left: 2%;
+  width: clamp(8rem, 14vw, 13rem);
+}
+
+.violetMedallions .utilityDepthRig:nth-child(6) > i {
+  background-color: rgb(29 72 160 / 82%);
+  color: #fff;
+}
+.violetMedallions .utilityDepthRig:nth-child(7) {
+  bottom: -2%;
+  left: 43%;
+  width: clamp(7rem, 12vw, 11rem);
+}
+
+.violetMedallions .utilityDepthRig:nth-child(7) > i {
+  background-color: rgb(16 74 125 / 78%);
+  color: #fff;
+}
+.violetMedallions .utilityDepthRig:nth-child(8) {
+  top: 20%;
+  left: 27%;
+  width: clamp(7rem, 11vw, 10rem);
+  height: clamp(5.5rem, 13vh, 8rem);
+}
+
+.violetMedallions .utilityDepthRig:nth-child(8) > i {
+  background-color: rgb(163 232 238 / 84%);
+}
+.violetMedallions .utilityDepthRig:nth-child(9) {
+  right: 36%;
+  bottom: 20%;
+  width: clamp(7.5rem, 12vw, 11rem);
+  height: clamp(5.5rem, 13vh, 8rem);
+}
+
+.violetMedallions .utilityDepthRig:nth-child(9) > i {
+  background-color: rgb(113 91 185 / 84%);
+  color: #fff;
+}
+
+.violetMedallions .utilityDepthRig[data-utility="speaking"] {
   top: 10%;
   left: 27%;
   width: clamp(9rem, 12.5vw, 11.5rem);
   height: auto;
   aspect-ratio: 1;
+}
+
+.violetMedallions i[data-utility="speaking"] {
   overflow: visible;
   border: 1px solid rgb(244 247 255 / 92%);
   border-radius: 50%;
@@ -3419,11 +3498,14 @@
   max-width: 78%;
 }
 
-.violetMedallions i[data-utility="tracking"] {
+.violetMedallions .utilityDepthRig[data-utility="tracking"] {
   right: 31%;
   bottom: 16%;
   width: clamp(8.5rem, 12.5vw, 11.5rem);
   height: clamp(5.8rem, 13.5vh, 8.2rem);
+}
+
+.violetMedallions i[data-utility="tracking"] {
   border-color: rgb(219 198 255 / 54%);
   background-color: rgb(55 28 111 / 88%);
   background-position: 42% 56%;
@@ -3442,11 +3524,14 @@
   transform: skewY(-9deg);
 }
 
-.violetMedallions i[data-utility="claude"] {
+.violetMedallions .utilityDepthRig[data-utility="claude"] {
   top: 12%;
   left: 48%;
   width: clamp(9.5rem, 13vw, 12rem);
   height: clamp(5.5rem, 13vh, 8rem);
+}
+
+.violetMedallions i[data-utility="claude"] {
   color: var(--deep-teal);
   border-color: rgb(255 188 162 / 62%);
   background-color: rgb(255 218 194 / 88%);
@@ -3459,9 +3544,9 @@
   letter-spacing: -0.075em;
 }
 
-.violetMedallions i:nth-child(5) b,
-.violetMedallions i:nth-child(8) b,
-.violetMedallions i:nth-child(9) b {
+.violetMedallions .utilityDepthRig:nth-child(5) > i b,
+.violetMedallions .utilityDepthRig:nth-child(8) > i b,
+.violetMedallions .utilityDepthRig:nth-child(9) > i b {
   font-size: clamp(1rem, 2vw, 2rem);
 }
 
@@ -3627,38 +3712,49 @@
   pointer-events: none;
 }
 
-.proofWall button {
+/* The scroll timeline owns the inner button; pointer depth owns the outer rig. */
+.proofWall .proofDepthRig {
   position: absolute;
   width: min(22vw, 350px);
-  height: min(33vh, 310px);
+  height: min(29vh, 280px);
+}
+
+.proofWall button {
   padding: clamp(1.3rem, 2vw, 2rem);
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 56%);
-  border-radius: 2rem;
-  color: #351950;
-  background-color: #eadcff;
+  border: 1px solid rgb(255 255 255 / 80%);
+  border-radius: 1.5rem;
+  color: #321846;
+  background-color: #f0eaee;
   background-position: center;
   background-size: cover;
-  box-shadow: 0 25px 65px rgb(24 5 59 / 18%);
+  box-shadow: inset 0 0 0 1px rgb(65 29 86 / 8%), 0 20px 40px rgb(20 4 35 / 20%), 0 3px 8px rgb(18 4 29 / 12%);
   font: inherit;
   text-align: left;
   cursor: pointer;
   pointer-events: auto;
 }
 
-.proofWall button:nth-child(1) { top: 8%; left: 2%; }
-.proofWall button:nth-child(2) { bottom: 7%; left: 4%; }
-.proofWall button:nth-child(3) { top: 3%; right: 2%; }
-.proofWall button:nth-child(4) { right: 4%; bottom: 6%; }
-.proofWall button:nth-child(2n) { background-position: 35% 50%; }
-.proofWall button:nth-child(3n) { background-position: 72% 50%; }
+.proofWall button::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--light-x, 50%) var(--light-y, 40%), rgb(255 255 255 / 18%), transparent 65%);
+  content: "";
+  pointer-events: none;
+}
+
+.proofWall .proofDepthRig:nth-child(1) { top: 13%; left: 5%; }
+.proofWall .proofDepthRig:nth-child(2) { bottom: 13%; left: 7%; }
+.proofWall .proofDepthRig:nth-child(3) { top: 9%; right: 5%; }
+.proofWall .proofDepthRig:nth-child(4) { right: 7%; bottom: 10%; }
 
 .proofWall button span {
   display: block;
   font-size: 0.63rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-  text-shadow: 0 1px 12px rgb(255 255 255 / 75%);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  opacity: 0.78;
 }
 
 .proofWall button strong {
@@ -3667,7 +3763,7 @@
   font-family: "Arial Black", Arial, sans-serif;
   max-width: 100%;
   font-size: clamp(1.8rem, 3.15vw, 3.2rem);
-  line-height: 0.94;
+  line-height: 0.98;
   letter-spacing: -0.065em;
 }
 
@@ -3679,34 +3775,21 @@
   display: block;
   max-width: 22ch;
   margin-top: 0.7rem;
-  padding: 0.36rem 0.5rem;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 44%);
   font-size: clamp(0.64rem, 0.84vw, 0.8rem);
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.25;
-  letter-spacing: 0.14em;
-  opacity: 1;
-}
-
-.proofWall button i {
-  position: absolute;
-  right: 10%;
-  bottom: 12%;
-  left: 10%;
-  height: 0.7rem;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgb(75 36 120 / 72%) 68%, rgb(75 36 120 / 14%) 68%);
+  letter-spacing: 0.12em;
 }
 
 .proofOpenLabel {
   position: absolute;
   right: 10%;
-  bottom: 20%;
-  font-size: 0.64rem;
-  font-weight: 900;
-  letter-spacing: 0.13em;
-  opacity: 0.72;
+  left: 10%;
+  bottom: 11%;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #47205f;
 }
 
 .navyField {
@@ -5719,43 +5802,61 @@
     bottom: 1rem;
   }
 
-  .violetMedallions i {
+  .violetMedallions .utilityDepthRig {
     width: 34vw;
+  }
+
+  .violetMedallions i {
     font-size: 10vw;
   }
 
-  .violetMedallions i:nth-child(1) { top: 8%; left: -9%; }
-  .violetMedallions i:nth-child(2) { top: 63%; left: -5%; }
-  .violetMedallions i:nth-child(3) { top: 9%; right: 13%; }
-  .violetMedallions i:nth-child(4) { right: -8%; bottom: 11%; }
-  .violetMedallions i:nth-child(5) {
+  .violetMedallions .utilityDepthRig:nth-child(1) {
+    top: 8%;
+    left: -9%;
+  }
+  .violetMedallions .utilityDepthRig:nth-child(2) {
+    top: 63%;
+    left: -5%;
+  }
+  .violetMedallions .utilityDepthRig:nth-child(3) {
+    top: 9%;
+    right: 13%;
+  }
+  .violetMedallions .utilityDepthRig:nth-child(4) {
+    right: -8%;
+    bottom: 11%;
+  }
+  .violetMedallions .utilityDepthRig:nth-child(5) {
     top: 47%;
     right: 4%;
     width: clamp(6rem, 18vw, 7rem);
     height: clamp(5.5rem, 12vh, 6.5rem);
   }
 
-  .violetMedallions i:nth-child(6) {
+  .violetMedallions .utilityDepthRig:nth-child(6) {
     top: 47%;
     left: -4%;
     width: clamp(6rem, 18vw, 7rem);
     height: clamp(5.5rem, 12vh, 6.5rem);
   }
-  .violetMedallions i:nth-child(7) { bottom: -3%; left: 34%; }
-  .violetMedallions i:nth-child(8) {
+  .violetMedallions .utilityDepthRig:nth-child(7) {
+    bottom: -3%;
+    left: 34%;
+  }
+  .violetMedallions .utilityDepthRig:nth-child(8) {
     top: 26%;
     left: 17%;
     width: clamp(6rem, 22vw, 8rem);
     height: clamp(5rem, 11vh, 6.5rem);
   }
-  .violetMedallions i:nth-child(9) {
+  .violetMedallions .utilityDepthRig:nth-child(9) {
     right: 35%;
     bottom: 25%;
     width: clamp(6rem, 23vw, 8.5rem);
     height: clamp(5rem, 11vh, 6.5rem);
   }
 
-  .violetMedallions i[data-utility="speaking"] {
+  .violetMedallions .utilityDepthRig[data-utility="speaking"] {
     top: 12%;
     left: 9%;
     width: clamp(7.5rem, 31vw, 8.6rem);
@@ -5766,14 +5867,14 @@
     font-size: clamp(0.84rem, 3.9vw, 1.14rem);
   }
 
-  .violetMedallions i[data-utility="tracking"] {
+  .violetMedallions .utilityDepthRig[data-utility="tracking"] {
     right: 25%;
     bottom: 21%;
     width: clamp(6.8rem, 29vw, 8rem);
     height: clamp(5rem, 11vh, 6.3rem);
   }
 
-  .violetMedallions i[data-utility="claude"] {
+  .violetMedallions .utilityDepthRig[data-utility="claude"] {
     top: 15%;
     left: 57%;
     width: clamp(7.1rem, 30vw, 8.5rem);
@@ -5848,12 +5949,15 @@
     height: auto;
   }
 
-  .proofWall button {
+  .proofWall .proofDepthRig {
     position: relative;
     inset: auto;
     width: 30vw;
     height: 21vh;
     min-height: 9.5rem;
+  }
+
+  .proofWall button {
     padding: 0.78rem;
     border-radius: 1.35rem;
   }
@@ -5883,12 +5987,6 @@
     line-height: 1.2;
   }
 
-  .proofWall button i {
-    right: 0.78rem;
-    bottom: 0.62rem;
-    left: 0.78rem;
-    height: 0.32rem;
-  }
 
   .proofOpenLabel {
     right: 0.78rem;
@@ -6228,7 +6326,6 @@
 
   .proofWall button small {
     margin-top: 0.38rem;
-    padding: 0.26rem 0.34rem;
     overflow-wrap: anywhere;
     font-size: 0.58rem;
     line-height: 1.14;
@@ -6244,12 +6341,6 @@
     white-space: nowrap;
   }
 
-  .proofWall button i {
-    right: 0.68rem;
-    bottom: 0.56rem;
-    left: 0.68rem;
-    height: 0.28rem;
-  }
 
   .bookingTierChoices {
     grid-template-columns: 1fr;
@@ -6680,5 +6771,236 @@
 
   .reducedDetailCard {
     min-height: 16rem;
+  }
+}
+
+/* Astra local refinement. Scroll choreography remains owned by the V7 timeline. */
+.openingField::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at var(--light-x, 50%) var(--light-y, 40%), rgb(127 222 207 / 14%), transparent 52%);
+}
+.openingNote {
+  position: absolute;
+  z-index: 8;
+  top: 57%;
+  left: 5.5%;
+  width: 18rem;
+  color: var(--ice);
+  transition: opacity 250ms ease, visibility 250ms ease;
+}
+.openingNote p { font-size: clamp(1.4rem, 2.4vw, 2.4rem); line-height: 1.18; letter-spacing: -0.03em; font-weight: 500; }
+.openingNote span { display: block; margin-top: 1rem; max-width: 24ch; color: #bedadd; font-size: 0.875rem; line-height: 1.6; }
+.sequence[data-astra-opening="false"] .openingNote { opacity: 0; visibility: hidden; pointer-events: none; }
+.bookingRouteCta { border: 0; background: var(--ice); color: #082e3a; padding: 1rem 1.6rem; border-radius: 999px; box-shadow: 0 16px 44px rgb(1 14 29 / 30%); }
+.bookingRouteCopy strong { font-family: Arial, sans-serif; font-size: 0.875rem; letter-spacing: 0.03em; }
+.bookingRouteCopy small { color: #28515b; font-size: 0.75rem; font-weight: 500; }
+@media (hover: hover) {
+  .bookingRouteCta:hover { background: #bce9e3; }
+}
+@media (max-width: 899px) {
+  .openingNote { top: 47%; left: 6%; width: 14rem; }
+  .openingNote p { font-size: 1.4rem; }
+  .openingNote span { font-size: 0.8125rem; }
+  .openingCta { top: 75vh; }
+}
+@media (max-width: 480px) {
+  .openingNote { top: 43%; left: 7%; }
+  .openingNote p { font-size: 1.25rem; }
+  .openingNote span { max-width: 22ch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .openingNote { display: none; }
+  .openingField::after { display: none; }
+}
+
+/* Astra scene depth: independent inner rigs preserve the scroll timeline. */
+.page {
+  --scene-x: 0;
+  --scene-y: 0;
+}
+.phoneDepthRig { position: absolute; inset: 0; transform-style: preserve-3d; }
+.mascotDepthRig { width: 100%; transform-origin: 50% 72%; }
+.cardDepthRig {
+  position: absolute;
+  width: min(20vw, 310px);
+  height: clamp(226px, 29vh, 290px);
+  pointer-events: none;
+  perspective: 1100px;
+}
+.depthCard1 { top: 19%; left: 13%; --depth-distance: 22px; --scroll-depth: -22px; }
+.depthCard2 { bottom: 11%; left: 11%; --depth-distance: 34px; --scroll-depth: -38px; }
+.depthCard3 { top: 23%; right: 10%; --depth-distance: 28px; --scroll-depth: 18px; }
+.depthCard4 { bottom: 7%; right: 12%; --depth-distance: 18px; --scroll-depth: -28px; }
+.cardDepthRig .supportCard {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(20px, 1.85vw, 30px);
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 6px 24px 50px rgb(38 21 24 / 20%), 0 3px 8px rgb(38 21 24 / 8%);
+  transform-style: preserve-3d;
+}
+.fiveCardComposition[data-active-tier] .cardDepthRig .supportCard::before { opacity: 0.65; }
+.fiveCardComposition[data-active-tier] .cardDepthRig .supportCard::after {
+  background: linear-gradient(165deg, rgb(255 249 238 / 97%) 2%, rgb(255 249 238 / 89%) 54%, rgb(255 239 216 / 36%) 100%);
+}
+.fiveCardComposition[data-active-tier="standard"] .cardDepthRig .supportCard::after {
+  background: linear-gradient(165deg, rgb(238 252 255 / 96%) 2%, rgb(238 252 255 / 84%) 54%, rgb(193 245 255 / 35%) 100%);
+}
+.cardDepthRig .supportCard > span {
+  margin-bottom: 20px;
+  color: inherit;
+  font-size: clamp(9px, 0.69vw, 11px);
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  opacity: 0.72;
+}
+.fiveCardComposition[data-active-tier] .cardDepthRig .supportCard > strong {
+  max-width: 15ch;
+  font-size: clamp(20px, 2vw, 31px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.cardDepthRig .supportCard > small {
+  max-width: 23ch;
+  margin-top: 12px;
+  font-size: clamp(11px, 0.88vw, 14px);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.fiveCardComposition[data-active-tier] .cardDepthRig .supportCard .cardGlyph {
+  inset: auto 20px 16px auto;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  aspect-ratio: auto;
+  font-size: clamp(27px, 3.1vw, 44px);
+  letter-spacing: -0.04em;
+  opacity: 0.2;
+  pointer-events: none;
+}
+.cardDepthRig .cardOpenLabel {
+  inset: auto auto 24px 26px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.85;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.cardDepthRig .cardOpenLabel > span { font-size: 17px; transition: transform 180ms ease; }
+.cardDepthRig .supportCard:hover .cardOpenLabel > span { transform: translate(3px, -3px); }
+.cardDepthRig .supportCard:hover { box-shadow: 8px 32px 62px rgb(38 21 24 / 26%), 0 3px 10px rgb(38 21 24 / 10%); }
+
+/* Keep a solid outgoing alpha layer while only the upper gaze layer dissolves. */
+.mascotVisibleCrop[data-bridge-phase="to-gaze"] .videoCanvas,
+.mascotVisibleCrop[data-bridge-phase="to-base"] .videoCanvas {
+  opacity: 1;
+  transition: none;
+}
+
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .baseBackground { inset: -3%; transform: translate3d(calc(var(--scene-x, 0) * -12px), calc(var(--scene-y, 0) * -9px), 0); }
+  .openingHeadlineSystem { translate: calc(var(--scene-x, 0) * 9px) calc(var(--scene-y, 0) * 6px); }
+  .phoneDepthRig { transform: perspective(1300px) translate3d(calc(var(--scene-x, 0) * 10px), calc(var(--scene-y, 0) * 7px), 0) rotateX(calc(var(--scene-y, 0) * -3deg)) rotateY(calc(var(--scene-x, 0) * 4deg)); }
+  .cardDepthRig { transform: perspective(1100px) translate3d(calc(var(--scene-x, 0) * var(--depth-distance)), calc(var(--scene-y, 0) * var(--depth-distance) * 0.65 + var(--scene-travel, 0) * var(--scroll-depth)), 0) rotateX(calc(var(--scene-y, 0) * -5deg)) rotateY(calc(var(--scene-x, 0) * 7deg)); }
+}
+@media (min-width: 900px) and (max-width: 1150px) {
+  .cardDepthRig { width: 21vw; height: clamp(220px, 30vh, 270px); }
+  .depthCard1 { left: 12%; }
+  .depthCard2 { left: 11%; }
+  .depthCard3 { right: 9%; }
+  .depthCard4 { right: 10%; }
+}
+@media (max-width: 899px) {
+  .runtime .utilityHeader > span { display: none; }
+  .cardDepthRig { width: 29vw; height: max(22vh, 182px); }
+  .depthCard1 { top: 24%; left: 1%; }
+  .depthCard2 { bottom: 5%; left: 1%; }
+  .depthCard3 { top: 24%; right: 1%; }
+  .depthCard4 { bottom: 5%; right: 1%; }
+  .cardDepthRig .supportCard { border-radius: 13px; padding: 12px 10px 36px; }
+  .cardDepthRig .supportCard > span { margin-bottom: 10px; font-size: 9px; letter-spacing: 0.02em; }
+  .fiveCardComposition[data-active-tier] .cardDepthRig .supportCard > strong { max-width: 100%; font-size: clamp(13px, 3.35vw, 19px); line-height: 1.06; }
+  .cardDepthRig .supportCard > small { margin-top: 9px; font-size: 10px; line-height: 1.28; }
+  .cardDepthRig .cardOpenLabel { left: 10px; bottom: 14px; font-size: 10px; gap: 3px; }
+  .fiveCardComposition[data-active-tier] .cardDepthRig .supportCard .cardGlyph { display: none; }
+}
+@media (max-width: 899px) and (max-height: 550px) {
+  .stage { min-height: 620px; }
+  .runtime .utilityHeader { display: none; }
+}
+@media (prefers-reduced-motion: reduce), (pointer: coarse) {
+  .phoneDepthRig, .cardDepthRig, .mascotDepthRig { transform: none; }
+}
+.priceCount { display: block; white-space: nowrap; }
+.fiveCardComposition[data-active-tier] .cardDepthRig .supportCard > strong { overflow-wrap: anywhere; hyphens: auto; }
+.fiveCardComposition[data-active-tier="standard"] .cardDepthRig .supportCard[data-visual="terms"] > strong { font-size: clamp(18px, 1.75vw, 27px); }
+@media (min-width: 900px) {
+  .phoneUiState > small { bottom: 23%; max-width: 25ch; font-size: clamp(12px, 1vw, 16px); line-height: 1.4; text-shadow: 0 2px 8px rgb(12 29 50 / 30%); }
+  .phoneUiState > div { bottom: 20%; }
+}
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .blueField { background-position: center, calc(50% - var(--scene-x, 0) * 12px) calc(50% - var(--scene-y, 0) * 9px); }
+}
+@media (max-width: 899px) {
+  .phoneDepthRig, .cardDepthRig, .mascotDepthRig { transform: none; }
+  .fiveCardComposition[data-active-tier] .cardDepthRig .supportCard > strong,
+  .fiveCardComposition[data-active-tier="standard"] .cardDepthRig .supportCard[data-visual="terms"] > strong { font-size: clamp(12px, 3.1vw, 18px); line-height: 1.15; }
+  .cardDepthRig .supportCard { padding-inline: 9px; }
+}
+@media (min-width: 900px) {
+  .fiveCardComposition[data-active-tier] .cardDepthRig .supportCard > strong { hyphens: none; text-wrap: wrap; }
+}
+@media (min-width: 900px) {
+  .fiveCardComposition[data-active-tier="standard"] .cardDepthRig .supportCard[data-visual="scope"] > strong { font-size: clamp(15px, 1.6vw, 25px); overflow-wrap: normal; }
+}
+
+/* Preserve the original opening artwork as the depth surface and fallback. */
+.openingField {
+  background-image: radial-gradient(circle at 52% 15%, rgb(127 222 207 / 10%), transparent 27%), linear-gradient(90deg, rgb(1 25 42 / 32%), rgb(1 28 43 / 10%) 40% 60%, rgb(1 25 42 / 28%)), url("/media/v7-generated/frog-opening-field.png");
+}
+.runtime .utilityHeader > span { visibility: hidden; }
+/* Liquid's anchor and silhouette never inherit pointer transforms. */
+.mascotDepthRig { transform: none; }
+.mascotVisibleCrop[data-handoff-mode="pose-splice"] :is(.videoCanvas, .gazeCanvas) { transition: none !important; }
+
+@media (max-width: 899px) {
+  .openingNote { left: 7%; }
+}
+
+/* Scroll moves the inner surfaces; only these outer wrappers respond to the pointer. */
+.violetMedallions i,
+.proofDepthRig > button {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.utilityDepthRig { --utility-depth: 22px; }
+.utilityDepthRig:nth-child(3n + 1) { --utility-depth: 16px; }
+.utilityDepthRig:nth-child(3n + 2) { --utility-depth: 32px; }
+.proofDepthRig:nth-child(1) { --proof-depth: 20px; }
+.proofDepthRig:nth-child(2) { --proof-depth: 32px; }
+.proofDepthRig:nth-child(3) { --proof-depth: 26px; }
+.proofDepthRig:nth-child(4) { --proof-depth: 16px; }
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .utilityDepthRig {
+    transform: perspective(1100px) translate3d(calc(var(--scene-x, 0) * var(--utility-depth)), calc(var(--scene-y, 0) * var(--utility-depth) * 0.65), 0) rotateX(calc(var(--scene-y, 0) * -5deg)) rotateY(calc(var(--scene-x, 0) * 7deg));
+  }
+  .proofDepthRig {
+    transform: perspective(1100px) translate3d(calc(var(--scene-x, 0) * var(--proof-depth)), calc(var(--scene-y, 0) * var(--proof-depth) * 0.65), 0) rotateX(calc(var(--scene-y, 0) * -5deg)) rotateY(calc(var(--scene-x, 0) * 7deg));
   }
 }

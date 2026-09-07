@@ -17,6 +17,12 @@ import {
   type V7PackedAlphaSurfaceSpec,
 } from "@/lib/v7-media-runtime/packed-alpha-renderer";
 import {
+  V7_MASCOT_GAZE_INTENT_EVENT,
+  V7_MASCOT_RECORDED_LOOKS,
+  type V7MascotGazeDirection,
+} from "@/lib/v7-media-runtime/mascot-pose-splice";
+export { V7_MASCOT_GAZE_INTENT_EVENT, V7_MASCOT_POSE_SPLICE } from "@/lib/v7-media-runtime/mascot-pose-splice";
+import {
   resolveV7MediaIntentSnapshot,
   selectV7HeadlinePlayingTiers,
   selectV7MediaDemand,
@@ -79,6 +85,7 @@ export type V7MascotSurfaceSpec = Readonly<{
   gazeVideo: HTMLVideoElement;
   visibleTarget: HTMLElement;
   baseToGazeMatchSeconds: number;
+  baseToGazeMatchWindows?: readonly Readonly<{ start: number; end: number }>[];
   gazeMatchStartSeconds: number;
   gazeToBaseMatchSeconds: number;
   baseMatchRestartSeconds: number;
@@ -86,6 +93,7 @@ export type V7MascotSurfaceSpec = Readonly<{
   toBaseCrossfadeMs: number;
   initialGazeDelayMs?: number;
   repeatedGazeDelayMs?: number;
+  gazeIntentTarget?: EventTarget;
   getReferenceTime?: () => number;
   onBaseFailed: (failed: boolean) => void;
   onGazeFailed: (failed: boolean) => void;
@@ -618,6 +626,9 @@ export function connectFooterSurface(adapter: V7MediaAdapter, spec: V7FooterSurf
 export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurfaceSpec): V7MediaLease {
   const session = new V7MediaSurfaceSession(adapter, "mascot", spec.onState);
   const { baseVideo, gazeVideo } = spec;
+  const originalBaseLoop = baseVideo.loop;
+  // Automatic playback alternates complete clips instead of repeating the base.
+  if (!spec.gazeIntentTarget) baseVideo.loop = false;
   const HAVE_CURRENT_DATA = 2;
   let visible = false;
   let cancelGazeTimer: (() => void) | null = null;
@@ -625,8 +636,20 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
   let cancelBaseFrame: (() => void) | null = null;
   let cancelGazeFrame: (() => void) | null = null;
   let baseLoadRequested = baseVideo.readyState !== 0;
+  let gazePreparing = false;
   let gazeRunActive = false;
   let returnInFlight = false;
+  let returnAttempts = 0;
+  let cancelPoseHold: (() => void) | null = null;
+  let gazeIntent: V7MascotGazeDirection = "neutral";
+  let heldDirection: "left" | "right" | null = null;
+  let intentRevision = 0;
+  let satisfiedIntentRevision = 0;
+  const heldDirections = new Set<"left" | "right">();
+  const pointerDriven = Boolean(spec.gazeIntentTarget);
+  spec.visibleTarget.dataset.handoffMode = "pose-splice";
+  spec.visibleTarget.dataset.gazeIntent = gazeIntent;
+  spec.visibleTarget.dataset.gazeHeld = "false";
 
   const mascotDemand = () => selectV7MediaDemand(
     "mascot",
@@ -647,36 +670,31 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
     cancelBaseFrame = null;
     cancelGazeFrame?.();
     cancelGazeFrame = null;
+    cancelPoseHold?.();
+    cancelPoseHold = null;
+    heldDirection = null;
+    spec.visibleTarget.dataset.gazeHeld = "false";
   };
-  const delay = (milliseconds: number, generation: number) => new Promise<boolean>((resolve) => {
-    let settled = false;
-    let cancel: () => void = () => undefined;
-    const finish = (completed: boolean) => {
-      if (settled) return;
-      settled = true;
-      cancel();
-      resolve(completed && valid(generation));
-    };
-    cancel = session.timeout(() => finish(true), milliseconds);
-    session.ownGeneration(() => finish(false));
-  });
   const waitForSeek = (video: HTMLVideoElement, time: number, generation: number) => new Promise<boolean>((resolve) => {
-    if (Math.abs(video.currentTime - time) <= 0.04) {
+    const atTarget = () => !video.seeking
+      && video.readyState >= HAVE_CURRENT_DATA
+      && Math.abs(video.currentTime - time) <= 0.06;
+    if (atTarget()) {
       resolve(valid(generation));
       return;
     }
     let settled = false;
     let cancelTimeout: () => void = () => undefined;
     let cancelListener: () => void = () => undefined;
-    const finish = () => {
+    const finish = (completed: boolean) => {
       if (settled) return;
       settled = true;
       cancelTimeout();
       cancelListener();
-      resolve(valid(generation));
+      resolve(completed && valid(generation));
     };
-    cancelTimeout = session.timeout(finish, 600);
-    cancelListener = session.ownGeneration(adapter.listen(video, "seeked", finish as EventListener));
+    cancelTimeout = session.timeout(() => finish(false), 600);
+    cancelListener = session.ownGeneration(adapter.listen(video, "seeked", (() => finish(atTarget())) as EventListener));
     session.ownGeneration(() => {
       if (settled) return;
       settled = true;
@@ -684,10 +702,42 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
       cancelListener();
       resolve(false);
     });
-    try { adapter.seek(video, time); } catch { finish(); }
+    try { adapter.seek(video, time); } catch { finish(false); }
+  });
+  // play() can resolve before the incoming element has presented its first
+  // decoded frame. Keep the outgoing clip visible until the matched frame is
+  // actually available; an elapsed timeout is not evidence of media readiness.
+  const waitForPresentedFrame = (video: HTMLVideoElement, minimumTime: number, generation: number) => new Promise<boolean>((resolve) => {
+    let settled = false;
+    let cancelTimeout: () => void = () => undefined;
+    let cancelFrame: (() => void) | null = null;
+    const finish = (completed: boolean) => {
+      if (settled) return;
+      settled = true;
+      cancelTimeout();
+      cancelFrame?.();
+      resolve(completed && valid(generation));
+    };
+    const inspect = (_time: number, metadata: { mediaTime: number }) => {
+      cancelFrame = null;
+      if (!valid(generation)) {
+        finish(false);
+        return;
+      }
+      if (!video.seeking && !video.paused && video.readyState >= HAVE_CURRENT_DATA
+        && metadata.mediaTime >= minimumTime - 0.06
+        && metadata.mediaTime <= video.currentTime + 0.1) {
+        finish(true);
+        return;
+      }
+      cancelFrame = session.mediaFrame(video, inspect);
+    };
+    cancelTimeout = session.timeout(() => finish(false), 900);
+    cancelFrame = session.mediaFrame(video, inspect);
+    session.ownGeneration(() => finish(false));
   });
   const resumeBaseVideo = () => {
-    if (mascotDemand() !== "play") return;
+    if (mascotDemand() !== "play" || gazeRunActive || returnInFlight) return;
     cancelBaseRetry?.();
     cancelBaseRetry = null;
     if (baseVideo.readyState < HAVE_CURRENT_DATA) {
@@ -713,29 +763,35 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
     cancelBaseFrame?.();
     cancelBaseFrame = null;
     const startedAt = adapter.now();
+    let settled = false;
+    let cancelEnded: (() => void) | null = null;
+    const finish = (matched: boolean) => {
+      if (settled) return;
+      settled = true;
+      cancelBaseFrame?.(); cancelBaseFrame = null;
+      cancelEnded?.();
+      resolve(matched && valid(generation));
+    };
+    // End-of-clip is also an authoritative boundary. A busy renderer may skip
+    // the last callback; that must never suppress the second original clip.
+    cancelEnded = session.ownGeneration(adapter.listen(baseVideo, "ended", (() => finish(true)) as EventListener));
+    session.ownGeneration(() => finish(false));
     const inspect = (now: number, mediaTime: number) => {
       cancelBaseFrame = null;
-      if (!valid(generation)) {
-        resolve(false);
-        return;
-      }
+      if (!valid(generation)) { finish(false); return; }
       const duration = baseVideo.duration;
       const currentTime = Number.isFinite(mediaTime) ? mediaTime : baseVideo.currentTime;
-      const nearMatch = Number.isFinite(duration)
-        && duration > 0
-        && currentTime >= spec.baseToGazeMatchSeconds
-        && currentTime <= Math.min(duration, spec.baseToGazeMatchSeconds + 0.28);
-      const waitLimit = Number.isFinite(duration) && duration > 0
-        ? Math.max(10000, duration * 1500)
-        : 10000;
-      if (nearMatch) {
-        resolve(true);
-        return;
-      }
-      if (now - startedAt >= waitLimit) {
-        resolve(false);
-        return;
-      }
+      const matchWindows = spec.baseToGazeMatchWindows ?? [{
+        start: spec.baseToGazeMatchSeconds,
+        end: spec.baseToGazeMatchSeconds + 0.12,
+      }];
+      // WebM callback timestamps round 611/24 to 25.458. The 2 ms tolerance
+      // accounts for metadata precision without skipping an animation frame.
+      const nearMatch = Number.isFinite(duration) && duration > 0
+        && matchWindows.some(({ start, end }) => currentTime >= start - 0.002 && currentTime <= Math.min(duration, end));
+      const waitLimit = Number.isFinite(duration) && duration > 0 ? Math.max(10000, duration * 1500) : 10000;
+      if (nearMatch || baseVideo.ended) { finish(true); return; }
+      if (now - startedAt >= waitLimit) { finish(false); return; }
       cancelBaseFrame = session.mediaFrame(baseVideo, (time, metadata) => inspect(time, metadata.mediaTime));
     };
     cancelBaseFrame = session.mediaFrame(baseVideo, (time, metadata) => inspect(time, metadata.mediaTime));
@@ -743,43 +799,62 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
 
   let scheduleGaze: (delayMs?: number) => void = () => undefined;
   const finishGaze = async (generation: number) => {
-    if (!gazeRunActive || returnInFlight || !valid(generation)) return;
+    if (!gazeRunActive || returnInFlight || returnAttempts >= 2 || !valid(generation)) return;
     gazeRunActive = false;
     returnInFlight = true;
+    returnAttempts += 1;
     cancelGazeFrame?.();
     cancelGazeFrame = null;
-    if (Math.abs(baseVideo.currentTime - spec.baseMatchRestartSeconds) > 0.06) {
-      await waitForSeek(baseVideo, spec.baseMatchRestartSeconds, generation);
-    }
-    if (!valid(generation)) {
+    const keepGazeVisible = (failure: string) => {
+      if (!valid(generation)) return;
       returnInFlight = false;
+      adapter.pause(baseVideo);
+      gazeRunActive = true;
+      session.transition({ presentation: "gaze", failure });
+      // A brief decode stall gets one retry. Keep the last real gaze frame
+      // visible if the base decoder stays unavailable.
+      if (returnAttempts < 2) session.timeout(() => void finishGaze(generation), 250);
+    };
+    if (!await waitForSeek(baseVideo, spec.baseMatchRestartSeconds, generation)) {
+      keepGazeVisible("base-return-seek-unready");
       return;
     }
     try {
       await adapter.play(baseVideo);
     } catch {
-      if (valid(generation)) {
-        spec.onBaseFailed(true);
-        session.transition({ decode: "failed", presentation: "poster", failure: "base-return-play-rejected" });
-      }
-      returnInFlight = false;
+      keepGazeVisible("base-return-play-rejected");
       return;
     }
     if (!valid(generation)) {
-      returnInFlight = false;
       return;
     }
-    setBridge("to-base");
-    if (!await delay(spec.toBaseCrossfadeMs, generation)) {
-      returnInFlight = false;
+    if (!await waitForPresentedFrame(baseVideo, spec.baseMatchRestartSeconds, generation)) {
+      keepGazeVisible("base-return-frame-unready");
       return;
     }
+    spec.onBaseFailed(false);
+    // One visible layer: switch at a decoded frontal pose instead of exposing
+    // two independently moving ear silhouettes for a long dissolve.
     spec.onGazeActive(false);
     setBridge("idle");
     adapter.pause(gazeVideo);
     returnInFlight = false;
-    session.transition({ playback: "playing", presentation: "base" });
-    scheduleGaze(spec.repeatedGazeDelayMs ?? 7600);
+    session.transition({ playback: "playing", presentation: "base", failure: null });
+    if (!pointerDriven) scheduleGaze(spec.repeatedGazeDelayMs ?? 7600);
+    else if (gazeIntent !== "neutral" && satisfiedIntentRevision < intentRevision) scheduleGaze(0);
+  };
+  const resumeHeldGaze = async (generation: number) => {
+    if (!heldDirection || !valid(generation)) return;
+    cancelPoseHold?.();
+    cancelPoseHold = null;
+    heldDirection = null;
+    spec.visibleTarget.dataset.gazeHeld = "false";
+    try {
+      await adapter.play(gazeVideo);
+      if (valid(generation)) watchGazeReturn(generation);
+    } catch {
+      if (valid(generation)) session.transition({ failure: "gaze-hold-resume-rejected" });
+    }
   };
   const watchGazeReturn = (generation: number) => {
     cancelGazeFrame?.();
@@ -787,6 +862,17 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
     const inspect = (_time: number, mediaTime: number) => {
       cancelGazeFrame = null;
       if (!valid(generation) || returnInFlight) return;
+      if (pointerDriven && gazeIntent !== "neutral" && !heldDirections.has(gazeIntent)
+        && mediaTime >= V7_MASCOT_RECORDED_LOOKS[gazeIntent]
+        && mediaTime < V7_MASCOT_RECORDED_LOOKS[gazeIntent] + 0.2) {
+        heldDirection = gazeIntent;
+        heldDirections.add(gazeIntent);
+        satisfiedIntentRevision = intentRevision;
+        adapter.pause(gazeVideo);
+        spec.visibleTarget.dataset.gazeHeld = gazeIntent;
+        cancelPoseHold = session.timeout(() => void resumeHeldGaze(generation), V7_MASCOT_RECORDED_LOOKS.maximumHoldMs);
+        return;
+      }
       if (mediaTime >= spec.gazeToBaseMatchSeconds) {
         void finishGaze(generation);
         return;
@@ -796,48 +882,60 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
     cancelGazeFrame = session.mediaFrame(gazeVideo, (time, metadata) => inspect(time, metadata.mediaTime));
   };
   const startGaze = async () => {
+    if (gazePreparing || gazeRunActive || returnInFlight) return;
     const generation = session.invalidate({ failure: null });
     stopFrames();
+    gazePreparing = true;
     gazeRunActive = false;
     returnInFlight = false;
+    returnAttempts = 0;
+    heldDirections.clear();
     adapter.pause(gazeVideo);
     spec.onGazeActive(false);
     setBridge("idle");
     // Resume only after this gaze generation owns the base element. A play
     // completion from an earlier generation is intentionally side-effect free.
     resumeBaseVideo();
-    if (!await waitForSeek(gazeVideo, spec.gazeMatchStartSeconds, generation) || !valid(generation)) return;
-    if (!await waitForBaseMatch(generation) || !valid(generation)) return;
     try {
+      if (!await waitForSeek(gazeVideo, spec.gazeMatchStartSeconds, generation)) {
+        throw new Error("gaze-seek-unready");
+      }
+      if (!await waitForBaseMatch(generation)) throw new Error("base-match-unready");
       await adapter.play(gazeVideo);
       if (!valid(generation)) return;
+      if (!await waitForPresentedFrame(gazeVideo, spec.gazeMatchStartSeconds, generation)) {
+        throw new Error("gaze-frame-unready");
+      }
+      gazePreparing = false;
       gazeRunActive = true;
       spec.onGazeFailed(false);
       spec.onGazeActive(true);
-      setBridge("to-gaze");
-      watchGazeReturn(generation);
-      if (!await delay(spec.toGazeCrossfadeMs, generation)) return;
       setBridge("idle");
+      watchGazeReturn(generation);
       adapter.pause(baseVideo);
       session.transition({ presentation: "gaze", playback: "playing" });
       await waitForSeek(baseVideo, spec.baseMatchRestartSeconds, generation);
     } catch {
       if (!valid(generation)) return;
+      gazePreparing = false;
       gazeRunActive = false;
+      adapter.pause(gazeVideo);
       spec.onGazeFailed(true);
       spec.onGazeActive(false);
       setBridge("idle");
-      session.transition({ decode: "failed", presentation: "poster", failure: "gaze-play-rejected" });
+      session.transition({ presentation: "base", failure: "gaze-handoff-unready" });
       resumeBaseVideo();
+      if (!pointerDriven) scheduleGaze(spec.repeatedGazeDelayMs ?? 7600);
     }
   };
   scheduleGaze = (delayMs = spec.initialGazeDelayMs ?? 4200) => {
     cancelGazeTimer?.();
     cancelGazeTimer = null;
-    if (mascotDemand() !== "play") return;
+    if (mascotDemand() !== "play" || (pointerDriven && gazeIntent === "neutral")) return;
     cancelGazeTimer = session.timeout(() => {
       cancelGazeTimer = null;
       if (gazeVideo.readyState < HAVE_CURRENT_DATA) {
+        if (baseVideo.ended) resumeBaseVideo();
         if (gazeVideo.preload !== "auto") {
           gazeVideo.preload = "auto";
           adapter.load(gazeVideo);
@@ -849,7 +947,7 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
     }, delayMs);
   };
   const handleGazeTimeUpdate = () => {
-    if (gazeVideo.currentTime >= spec.gazeToBaseMatchSeconds) void finishGaze(session.generation);
+    if (!heldDirection && gazeVideo.currentTime >= spec.gazeToBaseMatchSeconds) void finishGaze(session.generation);
   };
   const stopGaze = () => {
     cancelGazeTimer?.();
@@ -858,11 +956,14 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
     cancelBaseRetry = null;
     stopFrames();
     session.invalidate({ playback: "paused", presentation: adapter.reducedMotion() ? "poster" : "base" });
+    gazePreparing = false;
     gazeRunActive = false;
     returnInFlight = false;
     adapter.pause(gazeVideo);
     spec.onGazeActive(false);
     setBridge("idle");
+    gazeIntent = "neutral";
+    spec.visibleTarget.dataset.gazeIntent = gazeIntent;
     if (adapter.reducedMotion()) {
       try { adapter.seek(gazeVideo, 0); } catch { /* metadata may not be ready */ }
     }
@@ -877,8 +978,11 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
       demand,
     });
     if (shouldPlay) {
+      // Repeated intersection/focus notifications must not restart the hidden
+      // base clip or create a second handoff while the gaze clip owns playback.
+      if (gazePreparing || gazeRunActive || returnInFlight) return;
       resumeBaseVideo();
-      scheduleGaze();
+      if (!pointerDriven && !cancelGazeTimer) scheduleGaze();
       return;
     }
     stopGaze();
@@ -892,6 +996,27 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
   session.own(adapter.listen(baseVideo, "loadeddata", resumeBaseVideo as EventListener));
   session.own(adapter.listen(gazeVideo, "timeupdate", handleGazeTimeUpdate as EventListener));
   session.own(adapter.listen(gazeVideo, "ended", (() => void finishGaze(session.generation)) as EventListener));
+  if (spec.gazeIntentTarget) {
+    session.own(adapter.listen(spec.gazeIntentTarget, V7_MASCOT_GAZE_INTENT_EVENT, ((event: Event) => {
+      const direction = (event as CustomEvent<{ direction?: unknown }>).detail?.direction;
+      if (direction !== "left" && direction !== "right" && direction !== "neutral") return;
+      if (gazeIntent === direction) return;
+      gazeIntent = direction;
+      intentRevision += 1;
+      spec.visibleTarget.dataset.gazeIntent = direction;
+      if (mascotDemand() !== "play") return;
+      if (heldDirection && direction !== heldDirection) {
+        void resumeHeldGaze(session.generation);
+      } else if (!gazeRunActive && !returnInFlight) {
+        if (direction === "neutral") {
+          stopGaze();
+          resumeBaseVideo();
+        } else if (!gazePreparing) {
+          scheduleGaze(0);
+        }
+      }
+    }) as EventListener));
+  }
   const initialRect = adapter.rect(spec.visibleTarget);
   const viewport = adapter.viewport();
   visible = initialRect.bottom > 0
@@ -912,6 +1037,10 @@ export function connectMascotSurface(adapter: V7MediaAdapter, spec: V7MascotSurf
     stopFrames();
     adapter.pause(baseVideo);
     adapter.pause(gazeVideo);
+    baseVideo.loop = originalBaseLoop;
+    delete spec.visibleTarget.dataset.handoffMode;
+    delete spec.visibleTarget.dataset.gazeIntent;
+    delete spec.visibleTarget.dataset.gazeHeld;
   });
   syncPlayback();
   return leaseForSession(session);

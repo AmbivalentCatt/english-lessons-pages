@@ -4,6 +4,13 @@ import {
   type V7ImplementedMediaSurfaceSpec,
 } from "@/lib/v7-media-runtime/surfaces";
 import type { V7MediaAdapter, V7MediaLease } from "@/lib/v7-media-runtime/runtime";
+export {
+  V7_MASCOT_GAZE_INTENT_EVENT,
+  V7_MASCOT_POSE_SPLICE,
+  V7_MASCOT_RECORDED_LOOKS,
+  type V7MascotGazeDirection,
+  type V7MascotGazeIntent,
+} from "@/lib/v7-media-runtime/mascot-pose-splice";
 
 export type V7MediaSurfaceSpec = V7ImplementedMediaSurfaceSpec;
 

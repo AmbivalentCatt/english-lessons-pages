@@ -1,6 +1,10 @@
 "use client";
 
 import Image from "@/components/StaticImage";
+import { AstraExperience } from "@/components/astra/AstraExperience";
+import { OpeningDepthLayers } from "@/components/astra/OpeningDepthLayers";
+import lowerStyles from "@/components/astra/astra-lower.module.css";
+import { PawTrail } from "@/components/astra/PawTrail";
 import {
   createContext,
   type CSSProperties,
@@ -31,7 +35,7 @@ import {
 import { v7AvailabilityLabel } from "@/lib/offer-domain/adapters/v7-presentation";
 import { resolveOfferDomainConsumer } from "@/lib/offer-domain/rollout";
 import { createFooterMaterialRenderer } from "@/lib/v7-media-runtime/footer-material-renderer";
-import { createV7MediaRuntime, type V7MediaRuntime } from "@/lib/v7-media-runtime";
+import { createV7MediaRuntime, V7_MASCOT_POSE_SPLICE, type V7MediaRuntime } from "@/lib/v7-media-runtime";
 import { V7_MEDIA_RUNTIME_SURFACES } from "@/lib/v7-media-runtime/runtime";
 import {
   V7_GSAP_SECTION_CUE_PLANS,
@@ -994,10 +998,10 @@ const materialCurrentClipPair = (progress: number) => {
 };
 
 const proofCards = [
-  { label: "PRO · ДЛИТЕЛЬНОСТЬ", value: "60", detail: "МИНУТ", artwork: "/media/pro-proof-artwork/duration-v3.png", detailIndex: 1 },
-  { label: "PRO · ПАКЕТ", value: "4 · 6 000 ₽", detail: "ЗАНЯТИЯ", artwork: "/media/pro-proof-artwork/format-v3.png", detailIndex: 0 },
-  { label: "PRO · ПАКЕТ", value: "8 · 11 400 ₽", detail: "ЗАНЯТИЙ", artwork: "/media/pro-proof-artwork/support-v3.png", detailIndex: 0 },
-  { label: "PRO · РАСПИСАНИЕ", value: "ПРИОРИТЕТ", detail: "ПОСТОЯННОЕ ВРЕМЯ", artwork: "/media/pro-proof-artwork/priority-v3.png", detailIndex: 2 },
+  { label: "PRO · ДЛИТЕЛЬНОСТЬ", value: "60", detail: "МИНУТ", artwork: "/media/pro-proof-artwork/duration-pearl-v4.png", detailIndex: 1 },
+  { label: "PRO · ПАКЕТ", value: "4 · 6 000 ₽", detail: "ЗАНЯТИЯ", artwork: "/media/pro-proof-artwork/format-pearl-v4.png", detailIndex: 0 },
+  { label: "PRO · ПАКЕТ", value: "8 · 11 400 ₽", detail: "ЗАНЯТИЙ", artwork: "/media/pro-proof-artwork/support-pearl-v4.png", detailIndex: 0 },
+  { label: "PRO · РАСПИСАНИЕ", value: "ПРИОРИТЕТ", detail: "ПОСТОЯННОЕ ВРЕМЯ", artwork: "/media/pro-proof-artwork/priority-pearl-v4.png", detailIndex: 2 },
 ] as const;
 
 const violetUtilities = [
@@ -1248,9 +1252,9 @@ function watchProMaterialLoopBoundary(video: HTMLVideoElement) {
 type RectState = { x: number; y: number; width: number; height: number };
 type TransformState = { x: number; y: number; scale: number; rotation: number };
 type V7ApplicationTier = "basic" | "standard" | "pro";
+type V7ApplicationLaunch = { tier: V7ApplicationTier; origin: RectState };
 type V7ApplicationOrigin = HTMLElement | RectState;
 type V7ApplicationHandler = (planName: TariffName, origin?: V7ApplicationOrigin) => void;
-type V7ApplicationLaunch = { tier: V7ApplicationTier; origin: RectState };
 
 type V7Bounds = {
   headline: RectState;
@@ -2268,7 +2272,6 @@ function LiquidReferenceHeroV7Sequence({
           0.4,
           (sourceRect?.width ?? window.innerWidth * 0.3) / Math.max(window.innerWidth, 1),
         );
-        const settledHeadlineY = Number(gsap.getProperty(headlineRig, "y")) || 0;
         siteRevealTimeline = gsap.timeline({
           onComplete: () => {
             delete stage.dataset.revealBeat;
@@ -2279,14 +2282,6 @@ function LiquidReferenceHeroV7Sequence({
 
         siteRevealTimeline
           .set(siteAssembly, { autoAlpha: 1, visibility: "visible" })
-          .set(headlineRig, {
-            autoAlpha: 0,
-            y: settledHeadlineY + 28,
-            rotationX: -7,
-            filter: "blur(7px)",
-            transformPerspective: 1000,
-          })
-          .set(openingCta, { autoAlpha: 0, y: 14 })
           .set(siteAssemblyFacets, {
             autoAlpha: 1,
             x: (index) => sourceOffsetX + [-18, 20, -12, 16, -7, 10][index],
@@ -2372,21 +2367,7 @@ function LiquidReferenceHeroV7Sequence({
             ease: "expo.inOut",
             stagger: { each: 0.035, from: "center" },
           }, 0.58)
-          .call(() => { stage.dataset.revealBeat = "content"; }, [], 0.94)
-          .to(headlineRig, {
-            autoAlpha: 1,
-            y: settledHeadlineY,
-            rotationX: 0,
-            filter: "blur(0px)",
-            duration: 0.62,
-            ease: "expo.out",
-          }, 0.98)
-          .to(openingCta, {
-            autoAlpha: 1,
-            y: 0,
-            duration: 0.42,
-            ease: "power3.out",
-          }, 1.16);
+          .call(() => { stage.dataset.revealBeat = "content"; }, [], 0.94);
       });
 
       if (reducedMotion) {
@@ -2615,7 +2596,7 @@ function LiquidReferenceHeroV7Sequence({
       const ghostCells = Array.from(
         blockGrid.querySelectorAll<SVGRectElement>(`.${styles.blockCell}`),
       );
-      const violetMedallionElements = Array.from(violetMedallions.children) as HTMLElement[];
+      const violetMedallionElements = Array.from(violetMedallions.querySelectorAll<HTMLElement>("[data-utility] > i"));
       const measureHeadline = () => {
         const previousTransform = {
           ...transformState(headlineRig),
@@ -2766,8 +2747,11 @@ function LiquidReferenceHeroV7Sequence({
           gsap.set(card, {
             x: side * viewportWidth * (isMobile ? 0.18 : 0.25),
             y: viewportHeight * (0.72 + (index % 2) * 0.18),
-            rotation: side * (index % 2 ? 2.8 : 1.6),
-            scale: isMobile ? 0.86 : 0.92,
+            rotation: side * (index % 2 ? 9 : 6),
+            rotationY: isMobile ? 0 : side * -24,
+            rotationX: isMobile ? 0 : 12,
+            transformPerspective: 1100,
+            scale: isMobile ? 0.86 : 0.82,
             autoAlpha: 0,
           });
         });
@@ -3176,7 +3160,9 @@ function LiquidReferenceHeroV7Sequence({
         .to(cards.slice(0, 3), {
           x: 0,
           y: 0,
-          rotation: (index) => index < 2 ? -1.2 : 1.2,
+          rotation: (index) => isMobile ? 0 : [-2.2, 1.4, 2][index],
+          rotationY: 0,
+          rotationX: 0,
           scale: 1,
           autoAlpha: 1,
           duration: 0.78,
@@ -3186,7 +3172,9 @@ function LiquidReferenceHeroV7Sequence({
         .to(cards[3], {
           x: 0,
           y: 0,
-          rotation: 1.2,
+          rotation: isMobile ? 0 : -1.6,
+          rotationY: 0,
+          rotationX: 0,
           scale: 1,
           autoAlpha: 1,
           duration: 0.68,
@@ -3290,6 +3278,8 @@ function LiquidReferenceHeroV7Sequence({
         .set(phone, { y: hiddenBelow }, standardCue("secondPhonePrepare", 25.34))
         .set(cards, {
           y: viewportHeight * 0.75,
+          rotationY: (index) => isMobile ? 0 : (index < 2 ? 18 : -18),
+          rotationX: isMobile ? 0 : -8,
           autoAlpha: 0,
           x: (index) => (index < 2 ? -1 : 1) * viewportWidth * 0.18,
         }, standardCue("secondCardsPrepare", 25.34))
@@ -3301,6 +3291,8 @@ function LiquidReferenceHeroV7Sequence({
         .to(cards, {
           x: 0,
           y: 0,
+          rotationY: 0,
+          rotationX: 0,
           autoAlpha: 1,
           duration: 0.72,
           stagger: 0.07,
@@ -3775,7 +3767,11 @@ function LiquidReferenceHeroV7Sequence({
           );
           setLoadingProgress(100);
 
-          if (readinessDegraded) {
+          // The opening assembly must never override a restored scroll scene.
+          // Only the main timeline owns the headline and opening CTA.
+          if (window.scrollY > sequence.offsetTop + 2) {
+            completeStaticReveal("scroll-restored");
+          } else if (readinessDegraded) {
             completeStaticReveal("readiness-fallback");
           } else {
             const revealCompleted = await new Promise<boolean>((resolve) => {
@@ -3796,6 +3792,10 @@ function LiquidReferenceHeroV7Sequence({
           }
 
           if (disposed) return;
+          // Scroll may change while fonts, images or the assembly are settling.
+          const settledProgress = gsap.utils.clamp(0, 1,
+            (window.scrollY - sequence.offsetTop) / Math.max(1, sequence.offsetHeight - window.innerHeight));
+          timeline.totalTime(referenceTimeAtScrollProgress(settledProgress), false);
           syncActiveOpeningWord(timeline.time());
           syncAnimatedControlAvailability(timeline.time());
           if (isLocal && debugHandle) {
@@ -3841,6 +3841,9 @@ function LiquidReferenceHeroV7Sequence({
       resizeFrame = window.requestAnimationFrame(() => {
         ScrollTrigger.refresh();
         ScrollTrigger.update();
+        const restoredProgress = gsap.utils.clamp(0, 1,
+          (window.scrollY - sequence.offsetTop) / Math.max(1, sequence.offsetHeight - window.innerHeight));
+        timelineRef.current?.totalTime(referenceTimeAtScrollProgress(restoredProgress), false);
       });
     };
     window.addEventListener("resize", onResize);
@@ -4220,12 +4223,9 @@ function LiquidReferenceHeroV7Sequence({
       baseVideo,
       gazeVideo,
       visibleTarget,
-      baseToGazeMatchSeconds: MASCOT_BASE_TO_GAZE_MATCH_SECONDS,
-      gazeMatchStartSeconds: MASCOT_GAZE_MATCH_START_SECONDS,
-      gazeToBaseMatchSeconds: MASCOT_GAZE_TO_BASE_MATCH_SECONDS,
-      baseMatchRestartSeconds: MASCOT_BASE_MATCH_RESTART_SECONDS,
       toGazeCrossfadeMs: MASCOT_TO_GAZE_CROSSFADE_MS,
       toBaseCrossfadeMs: MASCOT_TO_BASE_CROSSFADE_MS,
+      ...V7_MASCOT_POSE_SPLICE,
       getReferenceTime: () => timelineRef.current?.time() ?? 0,
       onBaseFailed: setVideoFailed,
       onGazeFailed: setGazeVideoFailed,
@@ -4655,7 +4655,7 @@ function LiquidReferenceHeroV7Sequence({
             }}
           >
             <div className={styles.baseBackground} aria-hidden="true" />
-            <div className={styles.openingField} ref={openingFieldRef} aria-hidden="true" />
+            <div className={styles.openingField} ref={openingFieldRef} aria-hidden="true"><OpeningDepthLayers /></div>
             <div className={styles.structuralWipes} ref={planesRef} aria-hidden="true">
               <span className={styles.planeA} />
               <span className={styles.planeB} />
@@ -4668,6 +4668,10 @@ function LiquidReferenceHeroV7Sequence({
               <span lang="en">LEARNING IN MOTION</span>
             </header>
 
+            <div className={styles.openingNote} lang="ru">
+              <p>Индивидуально.<br />В вашем темпе.</p>
+              <span>Английский для школьников и студентов</span>
+            </div>
             <div className={styles.openingHeadlineSystem} ref={headlineRigRef}>
               <div className={styles.headlineHtmlLayer} ref={headlineHtmlRef}>
                 <h1
@@ -4804,6 +4808,7 @@ function LiquidReferenceHeroV7Sequence({
               ref={fiveCardCompositionRef}
             >
               <div className={styles.phoneEntryRig} ref={phoneRef}>
+                <div className={styles.phoneDepthRig} data-astra-depth="phone">
                 <div className={styles.phoneBody} ref={phoneBodyRef}>
                   <div className={styles.minimalPhonePlaceholder}>
                     <div className={styles.phoneChrome}><span lang="en">YOUR LESSON</span><i /></div>
@@ -4872,19 +4877,22 @@ function LiquidReferenceHeroV7Sequence({
                   </div>
                   <div className={styles.paleMaterialWedge} ref={phoneMaterialRef} />
                 </div>
+                </div>
                 <span className={styles.phoneMascotAnchor} ref={phoneAnchorRef} />
               </div>
 
               <div className={styles.fiveCardScene}>
                 {supportCardsByTier[activeTierIndex].map((card, index) => (
+                  <div className={`${styles.cardDepthRig} ${styles[`depthCard${index + 1}`]}`} data-astra-depth={`card-${index}`} key={`tier-depth-${index}`}>
                   <button
                     aria-controls={`support-detail-${activeTier.id}-${index}`}
                     aria-expanded={activeSupportCardIndex === index}
                     aria-haspopup="dialog"
                     aria-label={`${card.eyebrow}: ${card.title} Открыть подробности`}
-                    className={`${styles.supportCard} ${styles[`card${index + 1}`]}`}
+                    className={styles.supportCard}
                     data-visual={card.visual}
                     data-v7-support-card
+                    lang="ru"
                     key={`tier-card-${index}`}
                     onClick={(event) => {
                       activeToolPriceRef.current = null;
@@ -4899,13 +4907,14 @@ function LiquidReferenceHeroV7Sequence({
                     type="button"
                   >
                     <span>{card.eyebrow}</span>
-                    <strong>{card.title}</strong>
+                    <strong>{card.visual === "price" && card.title === "1 · 4 · 8 занятий." ? <><span className={styles.priceCount}>1 · 4 · 8</span> занятий.</> : card.title}</strong>
                     <small>{card.detail}</small>
                     <div className={styles.cardGlyph} data-length={card.glyph.length} aria-hidden="true">
                       {card.glyph}
                     </div>
-                    <b className={styles.cardOpenLabel}>ПОДРОБНЕЕ</b>
+                    <b className={styles.cardOpenLabel}>Подробнее <span aria-hidden="true">↗</span></b>
                   </button>
+                  </div>
                 ))}
               </div>
             </section>
@@ -5148,14 +5157,18 @@ function LiquidReferenceHeroV7Sequence({
             <div className={styles.violetField} ref={violetFieldRef} aria-hidden="true">
               <div className={styles.violetMedallions} ref={violetMedallionsRef}>
                 {violetUtilities.map((utility) => (
-                  <i
+                  <div
+                    className={styles.utilityDepthRig}
+                    data-astra-depth={`utility-${utility.id}`}
                     data-utility={utility.id}
                     key={`${utility.value}-${utility.label}`}
                     style={{ "--utility-art": `url("${utility.artwork}")` } as CSSProperties}
                   >
-                    <b>{utility.value}</b>
-                    <span>{utility.label}</span>
-                  </i>
+                    <i data-utility={utility.id}>
+                      <b>{utility.value}</b>
+                      <span>{utility.label}</span>
+                    </i>
+                  </div>
                 ))}
               </div>
             </div>
@@ -5230,28 +5243,28 @@ function LiquidReferenceHeroV7Sequence({
 
             <section className={styles.proofWall} ref={proofWallRef} aria-label="Подробности тарифа PRO">
               {proofCards.map((card, index) => (
-                <button
-                  aria-controls={`support-detail-pro-${card.detailIndex}`}
-                  aria-haspopup="dialog"
-                  aria-label={`${card.label}: ${card.value} ${card.detail}. Открыть подробности`}
-                  data-v7-proof-card
-                  key={`${card.label}-${index}`}
-                  onClick={(event) => {
-                    detailTriggerRef.current = event.currentTarget;
-                    detailTriggerRectRef.current = event.currentTarget.getBoundingClientRect();
-                    setActiveSupportCardIndex(card.detailIndex);
-                  }}
-                  ref={(node) => { proofCardRefs.current[index] = node; }}
-                  style={{ backgroundImage: `linear-gradient(145deg, rgb(255 255 255 / 18%), rgb(104 65 155 / 8%)), url("${card.artwork}")` }}
-                  tabIndex={-1}
-                  type="button"
-                >
-                  <span>{card.label}</span>
-                  <strong data-length={card.value.length}>{card.value}</strong>
-                  <small>{card.detail}</small>
-                  <b className={styles.proofOpenLabel} aria-hidden="true">ПОДРОБНЕЕ</b>
-                  <i aria-hidden="true" />
-                </button>
+                <div className={styles.proofDepthRig} data-astra-depth={`proof-${index}`} key={`${card.label}-${index}`}>
+                  <button
+                    aria-controls={`support-detail-pro-${card.detailIndex}`}
+                    aria-haspopup="dialog"
+                    aria-label={`${card.label}: ${card.value} ${card.detail}. Открыть подробности`}
+                    data-v7-proof-card
+                    onClick={(event) => {
+                      detailTriggerRef.current = event.currentTarget;
+                      detailTriggerRectRef.current = event.currentTarget.getBoundingClientRect();
+                      setActiveSupportCardIndex(card.detailIndex);
+                    }}
+                    ref={(node) => { proofCardRefs.current[index] = node; }}
+                    style={{ backgroundImage: `url("${card.artwork}")` }}
+                    tabIndex={-1}
+                    type="button"
+                  >
+                    <span>{card.label}</span>
+                    <strong data-length={card.value.length}>{card.value}</strong>
+                    <small>{card.detail}</small>
+                    <b className={styles.proofOpenLabel} aria-hidden="true">Подробнее ↗</b>
+                  </button>
+                </div>
               ))}
             </section>
 
@@ -5307,6 +5320,7 @@ function LiquidReferenceHeroV7Sequence({
                 </defs>
               </svg>
               <div className={styles.mascotMotionRig} ref={mascotRef}>
+                <div className={styles.mascotDepthRig} data-astra-depth="mascot">
                 <div
                   className={styles.mascotVisibleCrop}
                   data-bridge-phase={mascotBridgePhase}
@@ -5426,6 +5440,7 @@ function LiquidReferenceHeroV7Sequence({
                       </video>
                     )}
                   </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -6445,7 +6460,6 @@ function LiquidReferenceHeroV7NormalFlow({
   const tickerTrackRefs = useRef<Array<HTMLDivElement | null>>([]);
   const materialToolTriggerRef = useRef<HTMLButtonElement | null>(null);
   const startHereRef = useRef<HTMLElement>(null);
-  const startHereTiltRef = useRef<HTMLDivElement>(null);
   const faqIdPrefix = V7_FAQ_ID_PREFIX;
   const selectedTariff = tariffs.find((tariff) => tariff.name === selectedPlan) ?? tariffs[1];
   const selectedPhoneCard = phoneUiCards.find((card) => card.tariffId === selectedTariff.id) ?? phoneUiCards[1];
@@ -6719,54 +6733,61 @@ function LiquidReferenceHeroV7NormalFlow({
 
   useEffect(() => {
     const section = startHereRef.current;
-    const plane = startHereTiltRef.current;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    if (!section || !plane || reducedMotion || !finePointer) return;
-
+    if (!section) return;
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const pointerPreference = window.matchMedia("(hover: hover) and (pointer: fine)");
     let animationFrame = 0;
     let currentX = 0;
     let currentY = 0;
     let targetX = 0;
     let targetY = 0;
 
-    const renderTilt = () => {
-      currentX += (targetX - currentX) * 0.11;
-      currentY += (targetY - currentY) * 0.11;
-      plane.style.transform = `perspective(900px) rotateX(${currentX.toFixed(3)}deg) rotateY(${currentY.toFixed(3)}deg)`;
-      if (Math.abs(targetX - currentX) > 0.01 || Math.abs(targetY - currentY) > 0.01) {
-        animationFrame = window.requestAnimationFrame(renderTilt);
+    const renderDepth = () => {
+      currentX += (targetX - currentX) * 0.12;
+      currentY += (targetY - currentY) * 0.12;
+      section.style.setProperty("--choice-x", currentX.toFixed(4));
+      section.style.setProperty("--choice-y", currentY.toFixed(4));
+      if (Math.abs(targetX - currentX) > 0.002 || Math.abs(targetY - currentY) > 0.002) {
+        animationFrame = window.requestAnimationFrame(renderDepth);
       } else {
         animationFrame = 0;
       }
     };
-    const requestTiltFrame = () => {
-      if (!animationFrame) animationFrame = window.requestAnimationFrame(renderTilt);
+    const requestDepthFrame = () => {
+      if (!animationFrame) animationFrame = window.requestAnimationFrame(renderDepth);
     };
     const handlePointerMove = (event: PointerEvent) => {
+      if (motionPreference.matches || !pointerPreference.matches) return;
       const rect = section.getBoundingClientRect();
-      const normalizedX = gsap.utils.clamp(-1, 1, ((event.clientX - rect.left) / rect.width - 0.5) * 2);
-      const normalizedY = gsap.utils.clamp(-1, 1, ((event.clientY - rect.top) / rect.height - 0.5) * 2);
-      targetX = normalizedY * -5;
-      targetY = normalizedX * 7;
-      requestTiltFrame();
+      targetX = gsap.utils.clamp(-1, 1, ((event.clientX - rect.left) / rect.width - 0.5) * 2);
+      targetY = gsap.utils.clamp(-1, 1, ((event.clientY - rect.top) / rect.height - 0.5) * 2);
+      requestDepthFrame();
     };
-    const resetTilt = () => {
+    const resetDepth = () => {
       targetX = 0;
       targetY = 0;
-      requestTiltFrame();
+      requestDepthFrame();
+    };
+    const syncPreferences = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+      currentX = currentY = targetX = targetY = 0;
+      section.style.removeProperty("--choice-x");
+      section.style.removeProperty("--choice-y");
     };
 
     section.addEventListener("pointermove", handlePointerMove);
-    section.addEventListener("pointerleave", resetTilt);
-    section.addEventListener("focusin", resetTilt);
-
+    section.addEventListener("pointerleave", resetDepth);
+    section.addEventListener("focusin", resetDepth);
+    motionPreference.addEventListener("change", syncPreferences);
+    pointerPreference.addEventListener("change", syncPreferences);
     return () => {
-      window.cancelAnimationFrame(animationFrame);
+      syncPreferences();
       section.removeEventListener("pointermove", handlePointerMove);
-      section.removeEventListener("pointerleave", resetTilt);
-      section.removeEventListener("focusin", resetTilt);
-      plane.style.transform = "";
+      section.removeEventListener("pointerleave", resetDepth);
+      section.removeEventListener("focusin", resetDepth);
+      motionPreference.removeEventListener("change", syncPreferences);
+      pointerPreference.removeEventListener("change", syncPreferences);
     };
   }, []);
 
@@ -6991,14 +7012,17 @@ function LiquidReferenceHeroV7NormalFlow({
           ) : null}
         </section>
 
-        <section className={styles.startHereSection} lang="ru" ref={startHereRef}>
-          <div>
-            <span>НОВИЧОК В АНГЛИЙСКОМ?</span>
-            <div className={styles.startHereTilt} ref={startHereTiltRef}>
-              <h2>Начните с того, что важно вам.</h2>
-            </div>
+        <section
+          aria-labelledby="liquid-v7-start-heading"
+          className={`${styles.startHereSection} ${lowerStyles.choiceSection}`}
+          lang="ru"
+          ref={startHereRef}
+        >
+          <PawTrail />
+          <div className={lowerStyles.choiceHeading} data-paw-exclusion>
+            <h2 id="liquid-v7-start-heading"><span>Начните с того,</span><span>что важно вам.</span></h2>
           </div>
-          <nav aria-label="Навигация по выбору занятия">
+          <nav aria-label="Навигация по выбору занятия" className={lowerStyles.choiceActions} data-paw-exclusion>
             <a
               href="#hero"
               onClickCapture={(event) => {
@@ -7007,7 +7031,7 @@ function LiquidReferenceHeroV7NormalFlow({
                 navigateToSequenceReference(0, "#hero");
               }}
             >
-              <b>01</b><span>Выбрать темп</span><i aria-hidden="true">СМОТРЕТЬ</i>
+              <span>Выбрать темп</span><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M6 16h20M17 7l9 9-9 9" /></svg>
             </a>
             <a
               href="#book-a-lesson"
@@ -7017,7 +7041,7 @@ function LiquidReferenceHeroV7NormalFlow({
                 navigateToBookingSection();
               }}
             >
-              <b>02</b><span>Выбрать тариф</span><i aria-hidden="true">СРАВНИТЬ</i>
+              <span>Выбрать тариф</span><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M6 16h20M17 7l9 9-9 9" /></svg>
             </a>
             <button
               aria-haspopup="dialog"
@@ -7026,7 +7050,7 @@ function LiquidReferenceHeroV7NormalFlow({
               onClick={(event) => onApply(selectedPlan, event.currentTarget)}
               type="button"
             >
-              <b>03</b><span>Открыть заявку · {selectedTariff.v7Name}</span><i aria-hidden="true">ОТКРЫТЬ</i>
+              <span>Открыть заявку<small>{selectedTariff.v7Name}</small></span><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M6 16h20M17 7l9 9-9 9" /></svg>
             </button>
           </nav>
         </section>
@@ -7083,7 +7107,7 @@ function LiquidReferenceHeroV7NormalFlow({
             <span>ПРЕПОДАВАТЕЛЬ</span>
             <strong>Evgenii Poletaev</strong>
             <p>Преподаю английский с 2016 года — 10 лет опыта.</p>
-            <small>Степень магистра лингвистики по программе «Перевод и переводоведение». Работаю в американской компании; дважды получил повышение и сейчас занимаю позицию Product Assistant.</small>
+            <small>Степень магистра лингвистики по программе «Перевод и переводоведение». Работаю в американской компании; дважды получил повышение и сейчас занимаю позицию Product Specialist.</small>
           </section>
         </footer>
     </div>
@@ -7133,7 +7157,18 @@ export function LiquidReferenceHeroV7() {
     return () => controller.abort();
   }, []);
 
-  useEffect(() => () => mediaRuntime.dispose(), [mediaRuntime]);
+  // StrictMode replays effects with the same runtime. Dispose only after a real
+  // unmount, once a replay has had the chance to reconnect its media surfaces.
+  const mediaLifecycleRef = useRef(0);
+  useEffect(() => {
+    mediaLifecycleRef.current += 1;
+    return () => {
+      const generation = ++mediaLifecycleRef.current;
+      queueMicrotask(() => {
+        if (mediaLifecycleRef.current === generation) mediaRuntime.dispose();
+      });
+    };
+  }, [mediaRuntime]);
   const lenisRef = useRef<Lenis | null>(null);
   const smoothScrollLockCountRef = useRef(0);
   const applicationLaunchTimersRef = useRef<number[]>([]);
@@ -7407,6 +7442,7 @@ export function LiquidReferenceHeroV7() {
           fontFamily: "Arial, Helvetica, sans-serif",
         }}
       >
+        <AstraExperience />
         <LiquidReferenceHeroV7Sequence availabilityLabels={availabilityLabels} mediaRuntime={mediaRuntime} onApply={openApplication} />
         <LiquidReferenceHeroV7NormalFlow availabilityLabels={availabilityLabels} mediaRuntime={mediaRuntime} onApply={openApplication} />
         <div
