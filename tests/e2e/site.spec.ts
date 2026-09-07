@@ -53,7 +53,7 @@ test("loads the repository subpath with local assets and no leaking root asset r
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await expect(page.locator("main")).toBeVisible();
   await expect(
-    page.locator('[data-reveal-state="complete"] header').getByText("LEARNING IN MOTION", { exact: true }),
+    page.locator('[data-reveal-state="complete"] header').getByRole("link", { name: "На главную — Хелл оу...", exact: true }),
   ).toBeVisible();
   await expect.poll(() => rootAssetRequests).toEqual([]);
   const localResponses = await page.locator("img").evaluateAll((images) => images.slice(0, 8).map((image) => (image as HTMLImageElement).currentSrc));
@@ -71,7 +71,7 @@ test("serves the accepted legacy deep link and custom 404 shell after refresh", 
 
   await page.goto(`${basePath}liquid-scroll-lab/reference-v7-micro-fidelity/`, { waitUntil: "domcontentloaded" });
   await expect(
-    page.locator('[data-reveal-state="complete"] header').getByText("LEARNING IN MOTION", { exact: true }),
+    page.locator('[data-reveal-state="complete"] header').getByRole("link", { name: "На главную — Хелл оу...", exact: true }),
   ).toBeVisible();
 });
 
