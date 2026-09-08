@@ -6,6 +6,10 @@ import { createLiquidAtmosphere } from './atmosphere.js';
 // textures, lid corrections, eye alignment and attention springs are preserved.
 export function mountLiquidModel(stage, { onError }) {
  const asset = name => new URL(name, import.meta.url).href;
+ const compactDevice=matchMedia('(pointer: coarse)').matches||/iPad|iPhone|iPod/.test(navigator.userAgent);
+ const modelName=compactDevice?'Liquid-animated-mobile-v2.glb':'Liquid-animated.glb';
+ const compressedName=compactDevice?`${modelName}.gz`:'Liquid-animated-v1.glb.gz';
+ stage.dataset.modelQuality=compactDevice?'mobile':'full';
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;
@@ -22,7 +26,7 @@ export function mountLiquidModel(stage, { onError }) {
  const resources=new Set(),bitmaps=new Set(),abort=new AbortController();
  let disposed=false,ready=false,raf=0,previous=performance.now(),elapsed=0,stageVisible=true,dirty=true;
  let renderWidth=0,renderHeight=0,lastScroll=0;
- let model,mixer,clips=[],action,headBone,pointerPosition=null,pointerInside=false;
+ let model,mixer,clips=[],action,headBone,pointerPosition=null,pointerInside=false,deviceTilt=null;
  let followWeight=0,followWeightVelocity=0,followBlink=null,followBlinkIndex=0,nextFollowBlink=3.9,previousIdleTime=0;
  const cursorHead=new THREE.Vector2(),cursorHeadVelocity=new THREE.Vector2(),lookVelocity=new THREE.Vector2();
  const eyeAnchors=new Map(),idlePose=[];
@@ -39,6 +43,7 @@ export function mountLiquidModel(stage, { onError }) {
  function fail(error){if(disposed)return;stage.dataset.ready='false';stage.dataset.error='true';onError(error);}
  function resize(){if(disposed)return;const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);camera.aspect=w/(h*viewportScale);camera.updateProjectionMatrix();dirty=true;wake();}
  function measurePointer(){
+  if(deviceTilt&&!reduced.matches){pointer.set(deviceTilt.x,deviceTilt.y);pointerInside=true;return;}
   const wasInside=pointerInside,r=stage.getBoundingClientRect();
   // Screen coordinates are recomputed as the existing scroll rig moves/scales.
   // Keep this layer transparent to clicks and touch scrolling on the site.
@@ -47,6 +52,11 @@ export function mountLiquidModel(stage, { onError }) {
   pointerInside=!!pointerPosition&&!reduced.matches&&r.width>0&&r.height>0&&Math.hypot(dx/(r.width/2+margin),dy/(r.height/2+margin))<=1;
   if(pointerInside)pointer.set(THREE.MathUtils.clamp((pointerPosition.x-r.left)/r.width*2-1,-1,1),THREE.MathUtils.clamp((pointerPosition.y-r.top)/r.height*2-1,-1,1));
   else{pointer.set(0,0);if(wasInside&&ready){action.time=0;previousIdleTime=0;}}
+ }
+ function tiltChanged(event){
+  const input=event.detail;
+  deviceTilt=input?.active&&Number.isFinite(input.x)&&Number.isFinite(input.y)?{x:THREE.MathUtils.clamp(input.x,-.65,.65),y:THREE.MathUtils.clamp(input.y,-.65,.65)}:null;
+  dirty=true;if(stageVisible)wake();
  }
  function pointerMove(e){if(e.pointerType==='touch')return;pointerPosition={x:e.clientX,y:e.clientY};dirty=true;wake();}
  function pointerLeave(){pointerPosition=null;dirty=true;wake();}
@@ -61,6 +71,7 @@ export function mountLiquidModel(stage, { onError }) {
  });intersection.observe(stage);
  const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(stage);
  window.addEventListener('pointermove',pointerMove,{passive:true});
+ window.addEventListener('astra:device-tilt',tiltChanged);
  document.documentElement.addEventListener('pointerleave',pointerLeave);
  window.addEventListener('blur',pointerLeave);
  window.addEventListener('scroll',scrollChanged,{passive:true});
@@ -196,11 +207,11 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   stage.dataset.loadState='fetching';
   let buffer;
   if(typeof DecompressionStream!=='undefined'){
-   try{buffer=await fetchModel('Liquid-animated-v1.glb.gz',true);}
+   try{buffer=await fetchModel(compressedName,true);}
    catch(error){if(disposed||error.name==='AbortError')throw error;}
   }
   // The exact source GLB remains a compatibility fallback for older browsers.
-  buffer??=await fetchModel('Liquid-animated.glb');
+  buffer??=await fetchModel(modelName);
   if(disposed)return;
   stage.dataset.loadState='parsing';
   const gltf=await new GLTFLoader().parseAsync(buffer,asset('./'));
@@ -226,7 +237,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
  if(!idle||!headBone||eyeBones.length!==2||!closedPaint.value||!rimPaint.value||!contourField.value)throw new Error('Liquid rig is incomplete');
  action=mixer.clipAction(idle);action.play();
  cacheClipPose();ready=true;stage.dataset.clips=clips.map(c=>c.name).join(',');
-  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1';
+  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-mobile3';
  resize();wake();
 
  trackResources(model);
@@ -253,7 +264,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   stage.dataset.eyeX=look.x.toFixed(3);stage.dataset.eyeY=look.y.toFixed(3);stage.dataset.yaw=pivot.rotation.y.toFixed(3);
   stage.dataset.followWeight=followWeight.toFixed(3);stage.dataset.pointerInside=String(pointerInside);
   stage.dataset.headQuaternion=headBone.quaternion.toArray().map(x=>x.toFixed(5)).join(',');
-  stage.dataset.paused=String(reduced.matches);stage.dataset.mode='follow';
+  stage.dataset.paused=String(reduced.matches);stage.dataset.mode=deviceTilt?'tilt':'follow';
   if(!reduced.matches||dirty){renderer.render(scene,camera);dirty=false;stage.dataset.ready='true';stage.dataset.loadState='ready';}
   if(!reduced.matches)raf=requestAnimationFrame(frame);
  }
@@ -262,6 +273,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   if(disposed)return;disposed=true;abort.abort();cancelAnimationFrame(raf);
   intersection.disconnect();resizeObserver.disconnect();
   window.removeEventListener('pointermove',pointerMove);document.documentElement.removeEventListener('pointerleave',pointerLeave);
+  window.removeEventListener('astra:device-tilt',tiltChanged);
   window.removeEventListener('blur',pointerLeave);window.removeEventListener('scroll',scrollChanged);
   document.removeEventListener('visibilitychange',invalidate);reduced.removeEventListener('change',invalidate);
   renderer.domElement.removeEventListener('webglcontextlost',contextLost);

@@ -42,11 +42,44 @@ test.beforeEach(async ({ page }) => {
   await installSyntheticNetwork(page);
 });
 
+test("loads interactive Liquid and retains it through the tariff journey", async ({ page, isMobile }) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto("./");
+  const model = page.locator("[data-liquid-model]");
+  await expect(model).toHaveAttribute("data-ready", "true", { timeout: 60_000 });
+  await expect(model).toHaveAttribute("data-model-quality", isMobile ? "mobile" : "full");
+  await expect(model).toHaveAttribute("data-clips", "Liquid_Idle,Liquid_Gaze");
+  await expect(page.locator('[data-reveal-state="complete"]')).toBeVisible();
+  for (const time of [21.8, 26.6, 28.2, 31.4, 21.8]) {
+    await page.evaluate(referenceTime => {
+      window.dispatchEvent(new CustomEvent("liquid-v7:navigate-to-reference", {
+        detail: {referenceTime, immediate:true},
+      }));
+    }, time);
+    await expect.poll(() => page.locator("[data-liquid-motion-rig]").evaluate(el => Number((el as HTMLElement).dataset.referenceTime))).toBeCloseTo(time, 1);
+    await expect(model).toHaveAttribute("data-ready", "true");
+    await expect(model).toHaveAttribute("data-paused", "false");
+  }
+  const stage = page.locator("[data-motion-ready]");
+  expect(await stage.evaluate(el => getComputedStyle(el).overflow)).toBe("clip");
+  if (isMobile) {
+    const viewport = page.viewportSize()!;
+    const before = await page.evaluate(() => scrollY);
+    await page.setViewportSize({...viewport, height:viewport.height-60});
+    await expect.poll(() => page.evaluate(() => Math.abs(scrollY))).toBeGreaterThan(1000);
+    await expect.poll(() => page.evaluate(y => Math.abs(scrollY-y), before)).toBeLessThan(2);
+    await expect(stage).not.toHaveAttribute("data-reveal-mode", "viewport-restored");
+  }
+  await expect(page.locator('[data-testid="liquid-reference-v7-video"]')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("loads the repository subpath with local assets and no leaking root asset requests", async ({ page }) => {
   const rootAssetRequests: string[] = [];
   page.on("request", (request) => {
     const url = new URL(request.url());
-    if (url.origin === "http://127.0.0.1:4173" && /^\/(?:assets|media|mascot)\//.test(url.pathname)) {
+    if (url.hostname === "127.0.0.1" && /^\/(?:assets|media|mascot)\//.test(url.pathname)) {
       rootAssetRequests.push(url.pathname);
     }
   });
@@ -138,8 +171,73 @@ test("has no horizontal document overflow at the active viewport", async ({ page
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
+test("opt-in phone tilt drives existing depth and Liquid, then resets safely", async ({ page, isMobile }, testInfo) => {
+  test.skip(!isMobile, "Device sensors are offered only on touch devices.");
+  // Controlled sensor/permission input; this is not a physical-device sensor test.
+  await page.addInitScript(() => {
+    Object.defineProperty(DeviceOrientationEvent, "requestPermission", {
+      configurable: true, value: async () => "granted",
+    });
+    const orientation = new EventTarget();
+    Object.defineProperty(orientation, "angle", { configurable: true, value: 0 });
+    Object.defineProperty(screen, "orientation", { configurable: true, value: orientation });
+  });
+  await page.goto("./");
+  await expect(page.locator('[data-reveal-state="complete"]')).toBeVisible();
+  const model = page.locator('[data-liquid-model]');
+  await expect(model).toHaveAttribute('data-ready', 'true', { timeout: 60_000 });
+  const control = page.getByRole('button', { name: 'Наклон устройства', exact: true });
+  const send = (beta: number, gamma: number) => page.evaluate(({ beta, gamma }) => {
+    const event = new Event('deviceorientation');
+    Object.defineProperties(event, { beta: { value: beta }, gamma: { value: gamma } });
+    dispatchEvent(event);
+  }, { beta, gamma });
+  await send(45, 0);
+  await expect(model).toHaveAttribute('data-mode', 'follow');
+  await control.tap();
+  await expect(control).toHaveAttribute('aria-pressed', 'true');
+  await send(45, 0); // Calibrate to the visitor's current grip.
+  await send(48, 16);
+  await expect(model).toHaveAttribute('data-mode', 'tilt');
+  await expect.poll(() => model.getAttribute('data-eye-x').then(Number)).toBeGreaterThan(.25);
+  await expect.poll(() => page.locator('[data-liquid-v7-main]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeGreaterThan(.4);
+  await page.screenshot({ path: testInfo.outputPath('phone-tilt.png') });
+  await page.evaluate(() => {
+    Object.defineProperty(screen.orientation, "angle", { configurable: true, value: 90 });
+    dispatchEvent(new Event('orientationchange'));
+  });
+  await send(12, -25);
+  await expect.poll(() => page.locator('[data-liquid-v7-main]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeCloseTo(0, 2);
+  await send(100, -25);
+  await expect.poll(() => page.locator('[data-liquid-v7-main]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeCloseTo(.65, 2);
+  await control.tap();
+  await expect(control).toHaveAttribute('aria-pressed', 'false');
+  await expect(model).toHaveAttribute('data-mode', 'follow');
+  await send(20, 60);
+  await expect(page.locator('[data-liquid-v7-main]')).toHaveAttribute('data-device-tilt', 'false');
+  await control.tap();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(control).toHaveCount(0);
+  await expect(model).toHaveAttribute('data-paused', 'true');
+});
 
-test("restores the scroll scene when a static reload waits for the application script", async ({ page }) => {
+test("denied phone sensor permission leaves the normal page usable", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "Device sensors are offered only on touch devices.");
+  await page.addInitScript(() => {
+    Object.defineProperty(DeviceOrientationEvent, "requestPermission", { configurable: true, value: async () => "denied" });
+  });
+  await page.goto("./");
+  await expect(page.locator('[data-reveal-state="complete"]')).toBeVisible();
+  const control = page.getByRole('button', { name: 'Наклон устройства', exact: true });
+  await control.tap();
+  await expect(control).toHaveAttribute('aria-pressed', 'false');
+  await expect(control).toHaveText('Наклон недоступен');
+  await page.getByRole('link', { name: 'Перейти к выбору тарифа и заявке на урок', exact: true }).tap();
+  await expect(page.locator('[data-booking-arrival="true"]')).toBeAttached();
+});
+
+
+test("restores the scroll scene when a static reload waits for the application script", async ({ page, isMobile }) => {
   await page.goto("./", { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-reveal-state="complete"]')).toBeVisible();
   await page.evaluate(() => {
@@ -156,4 +254,11 @@ test("restores the scroll scene when a static reload waits for the application s
   await expect(page.locator('[data-reveal-state="complete"]')).toBeVisible();
   await expect.poll(() => page.evaluate(() => scrollY)).toBeCloseTo(previousY, 0);
   await expect(page.locator('[data-liquid-motion-rig]')).toBeVisible();
+  if (isMobile) await page.touchscreen.tap(5, 5);
+  else await page.keyboard.press("Shift");
+  await expect.poll(() => page.evaluate(() => history.scrollRestoration)).toBe("auto");
+  // Release history ownership without a pending native key-scroll animation,
+  // then verify that a subsequent scene seek is not overwritten.
+  await page.evaluate(y => scrollTo({ top: y - 500, behavior: "instant" }), previousY);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeCloseTo(previousY - 500, 0);
 });

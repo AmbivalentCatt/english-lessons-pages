@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const basePath = "/english-lessons-preview/";
+const previewPort = Number(process.env.PLAYWRIGHT_PREVIEW_PORT ?? 4173);
 
 export default defineConfig({
   testDir: "tests/e2e",
@@ -13,23 +14,23 @@ export default defineConfig({
   timeout: process.env.CI ? 90_000 : 45_000,
   expect: { timeout: process.env.CI ? 30_000 : 10_000 },
   use: {
-    baseURL: `http://127.0.0.1:4173${basePath}`,
+    baseURL: `http://127.0.0.1:${previewPort}${basePath}`,
     serviceWorkers: "block",
     trace: "retain-on-failure",
     video: "retain-on-failure",
   },
   webServer: {
-    command: "pnpm build && pnpm preview",
+    command: `pnpm build && pnpm exec vite preview --host 127.0.0.1 --port ${previewPort} --strictPort`,
     env: {
       ...process.env,
       GITHUB_PAGES_BASE: basePath,
       VITE_APPLICATION_API_BASE: "https://applications.example.invalid",
-      VITE_PUBLIC_SITE_URL: `http://127.0.0.1:4173${basePath.slice(0, -1)}`,
+      VITE_PUBLIC_SITE_URL: `http://127.0.0.1:${previewPort}${basePath.slice(0, -1)}`,
       VITE_TURNSTILE_SITE_KEY: "synthetic-public-site-key",
     },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    url: `http://127.0.0.1:4173${basePath}`,
+    url: `http://127.0.0.1:${previewPort}${basePath}`,
   },
   projects: [
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"], launchOptions: { args: ["--enable-gpu"] } } },

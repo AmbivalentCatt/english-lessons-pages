@@ -1,0 +1,16 @@
+.control {
+  min-height: 44px;
+  max-width: 52%;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  border-radius: 24px;
+  background: transparent;
+  color: inherit;
+  font: 600 12px/1.25 Arial, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.control:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+.control:disabled { opacity: 0.65; cursor: wait; }

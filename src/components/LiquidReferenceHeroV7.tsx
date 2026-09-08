@@ -2,6 +2,7 @@
 
 import Image from "@/components/StaticImage";
 import { AstraExperience } from "@/components/astra/AstraExperience";
+import { DeviceTiltControl } from "@/components/astra/DeviceTiltControl";
 import { OpeningDepthLayers } from "@/components/astra/OpeningDepthLayers";
 import lowerStyles from "@/components/astra/astra-lower.module.css";
 import { LiquidModel } from "@/components/astra/LiquidModel";
@@ -1825,6 +1826,7 @@ function LiquidReferenceHeroV7Sequence({
   useLayoutEffect(() => {
     if (prefersReducedMotion === null || useSafariMascotVideo === null) return;
     gsap.registerPlugin(ScrollTrigger);
+    ScrollTrigger.config({ ignoreMobileResize: true });
 
     const sequence = sequenceRef.current;
     const stage = stageRef.current;
@@ -1960,13 +1962,6 @@ function LiquidReferenceHeroV7Sequence({
     }
     delete document.documentElement.dataset.liquidV7MotionMissing;
 
-    const resetStageScroll = () => {
-      if (stage.scrollTop === 0 && stage.scrollLeft === 0) return;
-      stage.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    };
-    resetStageScroll();
-    stage.addEventListener("scroll", resetStageScroll, { passive: true });
-
     const colorProbe = document.createElement("i");
     colorProbe.style.cssText = "position:absolute;visibility:hidden;pointer-events:none";
     sequence.append(colorProbe);
@@ -1987,13 +1982,16 @@ function LiquidReferenceHeroV7Sequence({
     viewportRestoreRef.current = null;
     const layoutWidth = document.documentElement.clientWidth;
     const layoutHeight = window.innerHeight;
+    const nativeTouchViewport = shouldUseIOSPerformanceMode();
     const layoutStart = sequence.offsetTop;
     const layoutDistance = Math.max(1, sequence.offsetHeight - layoutHeight);
     let layoutScrollY = window.scrollY;
     let layoutReferenceTime = viewportRestore?.referenceTime
       ?? referenceTimeAtScrollProgress(gsap.utils.clamp(0, 1, (layoutScrollY - layoutStart) / layoutDistance));
     const viewportMatchesLayout = () => document.documentElement.clientWidth === layoutWidth
-      && window.innerHeight === layoutHeight;
+      // Safari expands/collapses its toolbar during a gesture. Keep the current
+      // timeline and scroll position; width changes still rebuild for rotation.
+      && (nativeTouchViewport || window.innerHeight === layoutHeight);
     let disposed = false;
     let siteRevealTimeline: gsap.core.Timeline | null = null;
     let runtimeCleanup: (() => void) | undefined;
@@ -2458,7 +2456,7 @@ function LiquidReferenceHeroV7Sequence({
       const fitMascotY = (desiredY: number, bottom: number) => useLiquidModel
         ? Math.min(desiredY, bottom - mascotRegistrationY) : desiredY;
       const settledMascotY = fitMascotY(preferredSettledMascotY, viewportHeight - 24);
-      const openingSettledMascotY = fitMascotY(preferredSettledMascotY, openingCta.offsetTop - 16);
+      const openingSettledMascotY = settledMascotY;
       const openingCue = (
         cue: keyof typeof V7_GSAP_SECTION_CUE_PLANS.openingHeadline,
         legacyReferenceTime: number,
@@ -3928,7 +3926,6 @@ function LiquidReferenceHeroV7Sequence({
       window.removeEventListener("scroll", rememberScroll);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pageshow", onPageShow);
-      stage.removeEventListener("scroll", resetStageScroll);
       window.cancelAnimationFrame(resizeFrame);
       const debugHandleAtCleanup = debugHandle;
       window.requestAnimationFrame(() => {
@@ -4676,7 +4673,8 @@ function LiquidReferenceHeroV7Sequence({
             top: 0,
             width: "100%",
             height: "100dvh",
-            overflow: "hidden",
+            // Clipping must not create a nested scroll container on iOS.
+            overflow: "clip",
             isolation: "isolate",
             background: "url('/media/tier-scene-artwork/basic-material-field.png') center / cover",
           }}
@@ -4742,6 +4740,7 @@ function LiquidReferenceHeroV7Sequence({
 
             <header className={styles.utilityHeader}>
               <a href="#hero" aria-label="На главную — Хелл оу...">Хелл оу...</a>
+              <DeviceTiltControl />
               <span lang="en">LEARNING IN MOTION</span>
             </header>
 
@@ -7408,6 +7407,14 @@ export function LiquidReferenceHeroV7() {
     // Static Pages can restore before React has mounted the tall scroll scene.
     // Restore reloads after that scene exists, before its reveal timeline settles.
     const reloadScrollKey = "liquid-v7-reload-scroll";
+    const restorationInputEvents = ["pointerdown", "touchstart", "wheel", "keydown"];
+    let restoringReload = false;
+    const resumeNativeRestoration = () => {
+      if (!restoringReload) return;
+      restoringReload = false;
+      ScrollTrigger.clearScrollMemory("auto");
+      restorationInputEvents.forEach(event => window.removeEventListener(event, resumeNativeRestoration));
+    };
     try {
       const saved = JSON.parse(sessionStorage.getItem(reloadScrollKey) ?? "null") as {
         href?: string; y?: number;
@@ -7419,11 +7426,19 @@ export function LiquidReferenceHeroV7() {
         || (!navigation && performance.navigation?.type === 1);
       if (isReload && saved?.href === window.location.href
         && typeof saved.y === "number" && Number.isFinite(saved.y) && saved.y > 0) {
+        // WebKit otherwise applies the empty shell's saved position after load,
+        // overwriting this seek. Keep ScrollTrigger's restoration policy in sync
+        // through its asynchronous initial history traversal. User input or
+        // leaving the page returns ownership to native history without a timer.
+        restoringReload = true;
+        ScrollTrigger.clearScrollMemory("manual");
         window.scrollTo({ top: saved.y, behavior: "instant" });
         ScrollTrigger.update();
+        restorationInputEvents.forEach(event => window.addEventListener(event, resumeNativeRestoration, { passive: true }));
       }
     } catch { /* Native restoration remains available when storage is blocked. */ }
     const rememberReloadScroll = () => {
+      resumeNativeRestoration();
       try {
         sessionStorage.setItem(reloadScrollKey, JSON.stringify({ href: window.location.href, y: window.scrollY }));
       } catch { /* Storage is optional. */ }
@@ -7432,7 +7447,8 @@ export function LiquidReferenceHeroV7() {
 
     return () => {
       window.removeEventListener("pagehide", rememberReloadScroll);
-      window.history.scrollRestoration = previousScrollRestoration;
+      restorationInputEvents.forEach(event => window.removeEventListener(event, resumeNativeRestoration));
+      ScrollTrigger.clearScrollMemory(previousScrollRestoration);
     };
   }, []);
 

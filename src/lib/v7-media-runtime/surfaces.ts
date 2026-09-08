@@ -292,9 +292,12 @@ export function connectPhoneSurface(adapter: V7MediaAdapter, spec: V7PhoneSurfac
     activeTier = nextTier;
     spec.onActiveTier(nextTier);
     const preserveStandardPreroll = nextTier === 1 && standardPrerollActive();
-    spec.videos.forEach((video) => {
+    spec.videos.forEach((video, index) => {
       if (preserveStandardPreroll && video === spec.videos[1]) return;
-      resetVideo(video);
+      // A paused iOS video retains its decoder surfaces. Release the departed
+      // tier before the next atmosphere starts, retaining only required preroll.
+      const nextVideo = nextTier === 2 ? index === 2 || index === 3 : index === nextTier;
+      resetVideo(video, isIOS && !nextVideo && !(index === 1 && standardPrerollActive()));
     });
     if (nextTier === 0) playVideo(spec.videos[0]);
     if (nextTier === 1) playVideo(spec.videos[1]);
@@ -359,6 +362,7 @@ export function connectPhoneSurface(adapter: V7MediaAdapter, spec: V7PhoneSurfac
   };
   const handleProIntroEnded = () => {
     if (activeTier !== 2) return;
+    if (isIOS && spec.videos[2]) adapter.releaseSource(spec.videos[2]);
     const idleVideo = spec.videos[3];
     setProPhase("idle");
     if (!idleVideo) return;

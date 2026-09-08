@@ -16,7 +16,7 @@ export function LiquidModel({ onError }: { onError: Dispatch<SetStateAction<bool
     let disposed = false;
     let model: ModelHandle | undefined;
     // Absolute URL keeps the self-contained module on Vite's static-asset route.
-    const runtimeUrl = new URL("/media/liquid-3d/runtime.js?v=atmosphere1", window.location.href).href;
+    const runtimeUrl = new URL("/media/liquid-3d/runtime.js?v=mobile3", window.location.href).href;
     const fail = () => { if (!disposed) onError(true); };
     void (import(/* @vite-ignore */ runtimeUrl) as Promise<ModelModule>)
       .then(({ mountLiquidModel }) => {

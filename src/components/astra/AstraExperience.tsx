@@ -71,6 +71,15 @@ export function AstraExperience() {
       target.y = clamp(event.clientY / window.innerHeight * 2 - 1);
       if (!pointerFrame) pointerFrame = requestAnimationFrame(animatePointer);
     };
+    const onTilt = (event: Event) => {
+      const input = (event as CustomEvent<{ x: number; y: number; active: boolean }>).detail;
+      const active = input?.active && !motion.matches && !finePointer.matches && sceneVisible && !document.hidden;
+      page.dataset.deviceTilt = String(Boolean(active));
+      if (!active) { resetPointer(); return; }
+      target.x = input.x; target.y = input.y;
+      if (!pointerFrame) pointerFrame = requestAnimationFrame(animatePointer);
+    };
+    window.addEventListener("astra:device-tilt", onTilt);
     const onPointerOut = (event: PointerEvent) => { if (!event.relatedTarget) resetPointer(); };
     motion.addEventListener("change", resetPointer);
     finePointer.addEventListener("change", resetPointer);
@@ -89,6 +98,8 @@ export function AstraExperience() {
       window.removeEventListener("resize", schedule);
       window.removeEventListener("pageshow", schedule);
       window.removeEventListener("pointermove", onPointer);
+      window.removeEventListener("astra:device-tilt", onTilt);
+      delete page.dataset.deviceTilt;
       motion.removeEventListener("change", resetPointer);
       finePointer.removeEventListener("change", resetPointer);
       document.removeEventListener("visibilitychange", resetPointer);
