@@ -216,3 +216,28 @@ describe("protected administration", () => {
     });
   });
 });
+
+
+describe("per-tariff public availability confirmations", () => {
+  it("keeps the confirmed PRO count fresh without renewing other tariffs", async () => {
+    const response = await handleRequest(request("/api/availability"), env, {
+      ...dependencies, now: () => new Date("2026-09-09T12:00:00Z"),
+    });
+    const body = await response.json() as { availability: { fresh: boolean; tariffs: Record<string, { status: string; remaining?: number }> } };
+    expect(response.status).toBe(200);
+    expect(body.availability.fresh).toBe(false);
+    expect(body.availability.tariffs.premium).toMatchObject({ status: "fresh", remaining: 2 });
+    expect(body.availability.tariffs.basic.status).toBe("confirmation-required");
+    expect(body.availability.tariffs.standard.status).toBe("confirmation-required");
+    expect(body.availability.tariffs.basic).not.toHaveProperty("remaining");
+  });
+
+  it("expires the PRO confirmation after its ordinary seven-day window", async () => {
+    const response = await handleRequest(request("/api/availability"), env, {
+      ...dependencies, now: () => new Date("2026-09-16T12:00:00Z"),
+    });
+    const body = await response.json() as { availability: { tariffs: Record<string, { status: string; remaining?: number }> } };
+    expect(body.availability.tariffs.premium.status).toBe("confirmation-required");
+    expect(body.availability.tariffs.premium).not.toHaveProperty("remaining");
+  });
+});

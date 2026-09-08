@@ -1,9 +1,9 @@
-import { CURRENT_AVAILABILITY_SNAPSHOT } from "../catalog/current-offer";
+import { CURRENT_AVAILABILITY_SNAPSHOT, CURRENT_AVAILABILITY_VERIFIED_AT_BY_TARIFF } from "../catalog/current-offer";
 import type { TariffId } from "../identifiers";
 import { serializeAvailability } from "../policies/availability";
 
 export function v7AvailabilityLabel(tariffId: TariffId, now: string): string {
-  const availability = serializeAvailability(CURRENT_AVAILABILITY_SNAPSHOT, now);
+  const availability = serializeAvailability({ ...CURRENT_AVAILABILITY_SNAPSHOT, verifiedAt: CURRENT_AVAILABILITY_VERIFIED_AT_BY_TARIFF[tariffId] }, now);
   return availability.status === "fresh"
     ? `СЕЙЧАС ДОСТУПНО: ${availability.remaining![tariffId]}`
     : availability.label;

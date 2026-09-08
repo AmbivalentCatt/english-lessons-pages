@@ -1,4 +1,4 @@
-import { CURRENT_AVAILABILITY_SNAPSHOT } from "../../src/lib/offer-domain/catalog/current-offer";
+import { CURRENT_AVAILABILITY_SNAPSHOT, CURRENT_AVAILABILITY_VERIFIED_AT_BY_TARIFF } from "../../src/lib/offer-domain/catalog/current-offer";
 import { isAvailabilityFresh } from "../../src/lib/offer-domain/policies/availability";
 import { CURRENT_PUBLIC_CLAIMS } from "../../src/lib/offer-domain/catalog/current-public-claims";
 import { adminHtml } from "./admin-html";
@@ -118,10 +118,12 @@ async function readJsonBody(request: Request) {
 async function handleAvailability(request: Request, env: Env, now: Date) {
   const cors = corsHeaders(env, request);
   if (!cors) return json({ ok: false, message: "Origin is not allowed." }, 403);
-  const fresh = isAvailabilityFresh(CURRENT_AVAILABILITY_SNAPSHOT, now.toISOString());
   const availability = Object.fromEntries(
     (["basic", "standard", "premium"] as const).map((tariffId) => {
+      const verifiedAt = CURRENT_AVAILABILITY_VERIFIED_AT_BY_TARIFF[tariffId];
+      const fresh = isAvailabilityFresh({ ...CURRENT_AVAILABILITY_SNAPSHOT, verifiedAt }, now.toISOString());
       return [tariffId, {
+        verifiedAt,
         label: fresh ? "Осталось мест" : CURRENT_PUBLIC_CLAIMS.staleAvailability,
         ...(fresh ? { remaining: CURRENT_AVAILABILITY_SNAPSHOT.remaining[tariffId] } : {}),
         status: fresh ? "fresh" : "confirmation-required",
@@ -131,7 +133,7 @@ async function handleAvailability(request: Request, env: Env, now: Date) {
   return json({
     ok: true,
     availability: {
-      fresh,
+      fresh: Object.values(availability).every(value => value.status === "fresh"),
       tariffs: availability,
       verifiedAt: CURRENT_AVAILABILITY_SNAPSHOT.verifiedAt,
     },

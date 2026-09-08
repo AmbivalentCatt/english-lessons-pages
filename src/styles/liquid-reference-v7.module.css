@@ -766,6 +766,10 @@
   transform: translateX(-50%);
 }
 
+.openingCta[data-liquid-model-clearance] {
+  margin-top: clamp(1.5rem, 4vh, 2.5rem);
+}
+
 .bookingRouteCta {
   min-width: clamp(14rem, 18vw, 17.25rem);
   gap: 0.82rem;
@@ -1085,9 +1089,12 @@
   font-style: normal;
   font-weight: 900;
   letter-spacing: 0.14em;
-  max-width: 58%;
+  max-width: 72%;
+  box-sizing: border-box;
   text-align: center;
-  white-space: nowrap;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .phoneUiState > strong {
@@ -3049,9 +3056,12 @@
 }
 
 .liquidModel canvas {
+  position: absolute;
+  top: calc((1 - var(--liquid-viewport-scale, 1)) * 50%);
+  left: 0;
   display: block;
   width: 100%;
-  height: 100%;
+  height: calc(var(--liquid-viewport-scale, 1) * 100%);
 }
 
 .liquidModelFallback {
@@ -6925,8 +6935,6 @@
   letter-spacing: 0;
   text-transform: none;
 }
-.cardDepthRig .cardOpenLabel > span { font-size: 17px; transition: transform 180ms ease; }
-.cardDepthRig .supportCard:hover .cardOpenLabel > span { transform: translate(3px, -3px); }
 .cardDepthRig .supportCard:hover { box-shadow: 8px 32px 62px rgb(38 21 24 / 26%), 0 3px 10px rgb(38 21 24 / 10%); }
 
 /* Keep a solid outgoing alpha layer while only the upper gaze layer dissolves. */

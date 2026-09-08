@@ -161,6 +161,14 @@ export const CURRENT_AVAILABILITY_SNAPSHOT: AvailabilitySnapshot = Object.freeze
   remaining: Object.freeze({ basic: 2, standard: 0, premium: 2 }),
 });
 
+// The user reconfirmed the existing two PRO places on September 8.
+// Confirmation is per tariff: it must not refresh BASIC or STANDARD.
+export const CURRENT_AVAILABILITY_VERIFIED_AT_BY_TARIFF = Object.freeze({
+  basic: CURRENT_AVAILABILITY_SNAPSHOT.verifiedAt,
+  standard: CURRENT_AVAILABILITY_SNAPSHOT.verifiedAt,
+  premium: "2026-09-08T09:28:00.554+03:00",
+});
+
 export const CURRENT_CAPACITY_TOTAL = Object.values(CURRENT_AVAILABILITY_SNAPSHOT.capacities)
   .reduce((sum, capacity) => sum + capacity, 0);
 

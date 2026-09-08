@@ -33,6 +33,7 @@ import {
   type PublicApplicationPayload,
   type PublicApplicationSuccess,
 } from "@/lib/application-contract";
+import { CURRENT_PUBLIC_CLAIMS } from "@/lib/offer-domain/catalog/current-public-claims";
 import { v7AvailabilityLabel } from "@/lib/offer-domain/adapters/v7-presentation";
 import { resolveOfferDomainConsumer } from "@/lib/offer-domain/rollout";
 import { createFooterMaterialRenderer } from "@/lib/v7-media-runtime/footer-material-renderer";
@@ -710,7 +711,8 @@ function lessonCountLabel(lessons: number) {
 
 function availabilityLabel(tierId: TariffId) {
   if (resolveOfferDomainConsumer("v7-presentation")) {
-    return v7AvailabilityLabel(tierId, new Date().toISOString());
+    const label = v7AvailabilityLabel(tierId, new Date().toISOString());
+    return label === CURRENT_PUBLIC_CLAIMS.staleAvailability ? "Нет свежих данных" : label;
   }
   return `СЕЙЧАС ДОСТУПНО: ${availabilityByTier[tierId]}`;
 }
@@ -4788,6 +4790,7 @@ function LiquidReferenceHeroV7Sequence({
             <a
               aria-label="Перейти к выбору тарифа и заявке на урок"
               className={`${styles.openingCta} ${styles.bookingRouteCta} ${styles.bookLessonControl}`}
+              data-liquid-model-clearance={useLiquidModel || undefined}
               href="#book-a-lesson"
               lang="ru"
               onClickCapture={(event) => {
@@ -4917,7 +4920,7 @@ function LiquidReferenceHeroV7Sequence({
                     <div className={styles.cardGlyph} data-length={card.glyph.length} aria-hidden="true">
                       {card.glyph}
                     </div>
-                    <b className={styles.cardOpenLabel}>Подробнее <span aria-hidden="true">↗</span></b>
+                    <b className={styles.cardOpenLabel}>Подробнее</b>
                   </button>
                   </div>
                 ))}
@@ -5267,7 +5270,7 @@ function LiquidReferenceHeroV7Sequence({
                     <span>{card.label}</span>
                     <strong data-length={card.value.length}>{card.value}</strong>
                     <small>{card.detail}</small>
-                    <b className={styles.proofOpenLabel} aria-hidden="true">Подробнее ↗</b>
+                    <b className={styles.proofOpenLabel} aria-hidden="true">Подробнее</b>
                   </button>
                 </div>
               ))}
@@ -7150,15 +7153,15 @@ export function LiquidReferenceHeroV7() {
           const value = body.availability!.tariffs[tariffId];
           return [tariffId, value.status === "fresh"
             ? `СЕЙЧАС ДОСТУПНО: ${value.remaining}`
-            : value.label];
+            : "Нет свежих данных"];
         }),
       )) as AvailabilityLabels);
     }).catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") return;
       setAvailabilityLabels(Object.freeze({
-        basic: "Актуальную доступность мест нужно подтвердить.",
-        standard: "Актуальную доступность мест нужно подтвердить.",
-        premium: "Актуальную доступность мест нужно подтвердить.",
+        basic: "Нет свежих данных",
+        standard: "Нет свежих данных",
+        premium: "Нет свежих данных",
       }));
     });
     return () => controller.abort();
