@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
+import { createLiquidAtmosphere } from './atmosphere.js';
 
 // Adapted from the user's selected 4189/animation preview. The exported model,
 // textures, lid corrections, eye alignment and attention springs are preserved.
@@ -10,7 +11,11 @@ export function mountLiquidModel(stage, { onError }) {
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;
  renderer.setClearColor(0x000000,0);stage.appendChild(renderer.domElement);
  const scene=new THREE.Scene(),pivot=new THREE.Group();pivot.position.y=-.09;scene.add(pivot);
- const camera=new THREE.PerspectiveCamera(30,1,.01,100);camera.position.z=4.1;
+ // Enlarge only the transparent drawing area. The original rig, framing scale
+ // and screen-space route stay fixed while the chin and tilted ears gain room.
+ const viewportScale=1.32;
+ stage.style.setProperty('--liquid-viewport-scale',String(viewportScale));
+ const camera=new THREE.PerspectiveCamera(THREE.MathUtils.radToDeg(2*Math.atan(Math.tan(Math.PI/12)*viewportScale)),1,.01,100);camera.position.z=4.1;
  const pointer=new THREE.Vector2(),look=new THREE.Vector2(),rimBlink={value:0},saved=[],lids=[],eyeBones=[];
  const closedPaint={value:null},paintProjection={value:new THREE.Vector3(.81152,.499926,.499109)};
  const rimPaint={value:null},contourField={value:null};
@@ -23,6 +28,7 @@ export function mountLiquidModel(stage, { onError }) {
  const eyeAnchors=new Map(),idlePose=[];
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  const rig=stage.closest('[data-liquid-motion-rig]');
+ const atmosphere=createLiquidAtmosphere(stage,rig);
  const idleBlinkEvents=[[4.88,.11,.026,.21,1],[8.3,.12,.035,.19,1],[10.49,.14,.055,.17,1],[15.56,.1,.035,.19,1],[18.41,.12,.025,.2,1],[19.76,.105,.018,.19,.82],[24.62,.12,.025,.2,1],[30.25,.11,.028,.22,1]];
  function setContourField(data){const texture=new THREE.DataTexture(new Float32Array(data.values),data.width,2,THREE.RGBAFormat,THREE.FloatType);texture.minFilter=texture.magFilter=THREE.LinearFilter;texture.needsUpdate=true;contourField.value=texture;resources.add(texture);}
  function trackResources(object){object.traverse(o=>{
@@ -31,12 +37,14 @@ export function mountLiquidModel(stage, { onError }) {
  });}
  function releaseResources(){for(const resource of resources)resource.dispose();resources.clear();for(const bitmap of bitmaps)bitmap.close();bitmaps.clear();}
  function fail(error){if(disposed)return;stage.dataset.ready='false';stage.dataset.error='true';onError(error);}
- function resize(){if(disposed)return;const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);camera.aspect=w/h;camera.updateProjectionMatrix();dirty=true;wake();}
+ function resize(){if(disposed)return;const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);camera.aspect=w/(h*viewportScale);camera.updateProjectionMatrix();dirty=true;wake();}
  function measurePointer(){
   const wasInside=pointerInside,r=stage.getBoundingClientRect();
   // Screen coordinates are recomputed as the existing scroll rig moves/scales.
   // Keep this layer transparent to clicks and touch scrolling on the site.
-  pointerInside=!!pointerPosition&&!reduced.matches&&r.width>0&&r.height>0&&pointerPosition.x>=r.left&&pointerPosition.x<=r.right&&pointerPosition.y>=r.top&&pointerPosition.y<=r.bottom;
+  const margin=Math.max(220,Math.min(420,r.width*.75));
+  const dx=pointerPosition?pointerPosition.x-(r.left+r.width/2):0,dy=pointerPosition?pointerPosition.y-(r.top+r.height/2):0;
+  pointerInside=!!pointerPosition&&!reduced.matches&&r.width>0&&r.height>0&&Math.hypot(dx/(r.width/2+margin),dy/(r.height/2+margin))<=1;
   if(pointerInside)pointer.set(THREE.MathUtils.clamp((pointerPosition.x-r.left)/r.width*2-1,-1,1),THREE.MathUtils.clamp((pointerPosition.y-r.top)/r.height*2-1,-1,1));
   else{pointer.set(0,0);if(wasInside&&ready){action.time=0;previousIdleTime=0;}}
  }
@@ -45,7 +53,12 @@ export function mountLiquidModel(stage, { onError }) {
  function wake(){if(!disposed&&!raf){previous=performance.now();raf=requestAnimationFrame(frame);}}
  function invalidate(){dirty=true;wake();}
  function scrollChanged(){lastScroll=performance.now();invalidate();}
- const intersection=new IntersectionObserver(([entry])=>{stageVisible=entry.isIntersecting;invalidate();});intersection.observe(stage);
+ // A responsive scene rebuild can queue both exit and re-entry before delivery.
+ // The latest record is authoritative; an earlier exit must not strand the rig.
+ const intersection=new IntersectionObserver(entries=>{
+  const entry=entries[entries.length-1];
+  if(entry){stageVisible=entry.isIntersecting;invalidate();}
+ });intersection.observe(stage);
  const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(stage);
  window.addEventListener('pointermove',pointerMove,{passive:true});
  document.documentElement.addEventListener('pointerleave',pointerLeave);
@@ -164,13 +177,32 @@ function setBlink(b){for(const o of lids){o.morphTargetInfluences[o.morphTargetD
 const qParent=new THREE.Quaternion(),qRest=new THREE.Quaternion(),qCorrection=new THREE.Quaternion(),forward=new THREE.Vector3(),direction=new THREE.Vector3();
 function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones){const rest=saved.find(r=>r.object===bone);bone.parent.getWorldQuaternion(qParent);qRest.copy(qParent).multiply(rest.quaternion);forward.set(0,1,0).applyQuaternion(qRest);direction.copy(forward).add(new THREE.Vector3(gx*.23,gy*.20,0)).normalize();qCorrection.setFromUnitVectors(forward,direction);bone.quaternion.copy(qParent).invert().multiply(qCorrection).multiply(qRest);}}
 
+ async function fetchModel(name,compressed=false){
+  // Retry interrupted downloads once; a transient network failure should not
+  // permanently switch a capable browser back to the video.
+  for(let attempt=0;attempt<2;attempt++){
+   try{
+    stage.dataset.loadAttempt=String(attempt+1);
+    const response=await fetch(asset(name),{signal:abort.signal,cache:attempt?'reload':'default'});
+    if(!response.ok)throw new Error(`Liquid model unavailable (${response.status})`);
+    // Some hosts supply Content-Encoding themselves, which fetch already decodes.
+    const stream=compressed&&!response.headers.get('Content-Encoding')?.includes('gzip')
+     ?response.body.pipeThrough(new DecompressionStream('gzip')):response.body;
+    return await new Response(stream).arrayBuffer();
+   }catch(error){if(disposed||error.name==='AbortError'||attempt===1)throw error;}
+  }
+ }
  async function load(){
-  const [buffer,texture]=await Promise.all([
-   fetch(asset('Liquid-animated.glb'),{signal:abort.signal}).then(r=>{if(!r.ok)throw new Error('Liquid model unavailable');return r.arrayBuffer();}),
-   new THREE.TextureLoader().loadAsync(asset('eye-rim-reference.png')).then(texture=>{if(disposed)texture.dispose();else resources.add(texture);return texture;})
-  ]);
-  if(disposed){texture.dispose();return;}
-  texture.flipY=false;texture.colorSpace=THREE.SRGBColorSpace;rimPaint.value=texture;resources.add(texture);
+  stage.dataset.loadState='fetching';
+  let buffer;
+  if(typeof DecompressionStream!=='undefined'){
+   try{buffer=await fetchModel('Liquid-animated-v1.glb.gz',true);}
+   catch(error){if(disposed||error.name==='AbortError')throw error;}
+  }
+  // The exact source GLB remains a compatibility fallback for older browsers.
+  buffer??=await fetchModel('Liquid-animated.glb');
+  if(disposed)return;
+  stage.dataset.loadState='parsing';
   const gltf=await new GLTFLoader().parseAsync(buffer,asset('./'));
   trackResources(gltf.scene);if(disposed){releaseResources();return;}
  model=gltf.scene;clips=gltf.animations;
@@ -181,17 +213,20 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   if(o.morphTargetInfluences)lids.push(o);
   if(o.userData.closed_paint_projection)paintProjection.value.fromArray(o.userData.closed_paint_projection);
   if(o.userData.eye_contour_field)setContourField(o.userData.eye_contour_field);
+  // The eye texture is byte-identical to eye-rim-reference.png. Reuse it
+  // instead of downloading and uploading another 9.8 MB copy.
+  if(o.isMesh&&o.userData.eye_aperture_contour){const m=Array.isArray(o.material)?o.material[0]:o.material;rimPaint.value=m.emissiveMap||m.map;}
   if(o.isMesh&&o.userData.closed_paint_reference){const m=Array.isArray(o.material)?o.material[0]:o.material;if(m.emissiveMap||m.map)closedPaint.value=m.emissiveMap||m.map;}
-  if(o.isMesh){const convert=m=>{const map=m.emissiveMap||m.map;const color=m.emissiveMap||m.emissive?.getHex()>0?m.emissive:m.color;const result=new THREE.MeshBasicMaterial({map,color:color?.clone()||new THREE.Color(1,1,1),side:m.side,toneMapped:false});if(o.userData.eye_aperture_contour)eyeApertureMaterial(result);if(o.userData.fitted_fur_support||m.userData.fitted_orbit_paint)lidMaterial(result,false,false,!m.userData.socket_root_cover);if(o.userData.closed_paint_reference)lidMaterial(result,o.userData.upper_lid);return result;};o.material=Array.isArray(o.material)?o.material.map(convert):convert(o.material);}
+  if(o.isMesh){const convert=m=>{const map=m.emissiveMap||m.map;const color=m.emissiveMap||m.emissive?.getHex()>0?m.emissive:m.color;const result=new THREE.MeshBasicMaterial({map,color:color?.clone()||new THREE.Color(1,1,1),side:m.side,toneMapped:false});if(o.userData.eye_aperture_contour)eyeApertureMaterial(result);if(o.userData.fitted_fur_support||m.userData.fitted_orbit_paint)lidMaterial(result,false,false,!m.userData.socket_root_cover);if(o.userData.closed_paint_reference)lidMaterial(result,o.userData.upper_lid);return atmosphere.apply(result);};o.material=Array.isArray(o.material)?o.material.map(convert):convert(o.material);}
  });
  const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),centre=box.getCenter(new THREE.Vector3());
  const wrapper=new THREE.Group();wrapper.add(model);wrapper.scale.setScalar(2.25/Math.max(size.x,size.y));wrapper.position.copy(centre).multiplyScalar(-wrapper.scale.x);pivot.add(wrapper);
  model.updateMatrixWorld(true);for(const bone of eyeBones)eyeAnchors.set(bone,headBone.worldToLocal(bone.getWorldPosition(new THREE.Vector3())));mixer=new THREE.AnimationMixer(model);
  const idle=clips.find(clip=>clip.name==='Liquid_Idle');
- if(!idle||!headBone||eyeBones.length!==2||!closedPaint.value||!contourField.value)throw new Error('Liquid rig is incomplete');
+ if(!idle||!headBone||eyeBones.length!==2||!closedPaint.value||!rimPaint.value||!contourField.value)throw new Error('Liquid rig is incomplete');
  action=mixer.clipAction(idle);action.play();
  cacheClipPose();ready=true;stage.dataset.clips=clips.map(c=>c.name).join(',');
- stage.dataset.revision='natural-motion-round4';
+  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1';
  resize();wake();
 
  trackResources(model);
@@ -213,12 +248,13 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   if(reduced.matches){restoreRest();pivot.rotation.set(0,0,0);look.set(0,0);followWeight=0;setBlink(0);}
   else{restoreClipPose();mixer.update(dt);cacheClipPose();setBlink(THREE.MathUtils.clamp(applyWebsiteMotion(dt,action.time),0,1));}
   alignEyeCenters();rimBlink.value=readBlink();
+  atmosphere.update(realDt,reduced.matches);
   stage.dataset.clipTime=action.time.toFixed(3);stage.dataset.blink=rimBlink.value.toFixed(3);
   stage.dataset.eyeX=look.x.toFixed(3);stage.dataset.eyeY=look.y.toFixed(3);stage.dataset.yaw=pivot.rotation.y.toFixed(3);
   stage.dataset.followWeight=followWeight.toFixed(3);stage.dataset.pointerInside=String(pointerInside);
   stage.dataset.headQuaternion=headBone.quaternion.toArray().map(x=>x.toFixed(5)).join(',');
   stage.dataset.paused=String(reduced.matches);stage.dataset.mode='follow';
-  if(!reduced.matches||dirty){renderer.render(scene,camera);dirty=false;stage.dataset.ready='true';}
+  if(!reduced.matches||dirty){renderer.render(scene,camera);dirty=false;stage.dataset.ready='true';stage.dataset.loadState='ready';}
   if(!reduced.matches)raf=requestAnimationFrame(frame);
  }
  resize();void load().catch(error=>{if(error.name!=='AbortError')fail(error);});

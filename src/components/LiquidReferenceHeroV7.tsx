@@ -1455,9 +1455,13 @@ function LiquidReferenceHeroV7Sequence({
   const detailCloseInFlightRef = useRef(false);
   const toolPriceTriggerRef = useRef<HTMLButtonElement | null>(null);
   const activeToolPriceRef = useRef<string | null>(null);
+  const toolPricePinnedRef = useRef(false);
+  const toolPriceFocusReturnRef = useRef(false);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const triggerRef = useRef<ScrollTrigger | null>(null);
   const sequenceContractStateRef = useRef<V7SequenceState | null>(null);
+  const viewportRestoreRef = useRef<{ referenceTime: number; afterSequence: number | null } | null>(null);
+  const [layoutRevision, setLayoutRevision] = useState(0);
   const [modelFailed, setModelFailed] = useState(false);
   const useLiquidModel = import.meta.env.VITE_LIQUID_3D !== "0" && !modelFailed;
   const [videoFailed, setVideoFailed] = useState(false);
@@ -1478,9 +1482,14 @@ function LiquidReferenceHeroV7Sequence({
 
   const closeToolPrice = useCallback((restoreFocus = true) => {
     activeToolPriceRef.current = null;
+    toolPricePinnedRef.current = false;
     setActiveToolPrice(null);
     if (restoreFocus) {
-      window.setTimeout(() => toolPriceTriggerRef.current?.focus({ preventScroll: true }), 0);
+      window.setTimeout(() => {
+        toolPriceFocusReturnRef.current = true;
+        toolPriceTriggerRef.current?.focus({ preventScroll: true });
+        toolPriceFocusReturnRef.current = false;
+      }, 0);
     }
   }, []);
 
@@ -1974,6 +1983,17 @@ function LiquidReferenceHeroV7Sequence({
     );
     colorProbe.remove();
 
+    const viewportRestore = viewportRestoreRef.current;
+    viewportRestoreRef.current = null;
+    const layoutWidth = document.documentElement.clientWidth;
+    const layoutHeight = window.innerHeight;
+    const layoutStart = sequence.offsetTop;
+    const layoutDistance = Math.max(1, sequence.offsetHeight - layoutHeight);
+    let layoutScrollY = window.scrollY;
+    let layoutReferenceTime = viewportRestore?.referenceTime
+      ?? referenceTimeAtScrollProgress(gsap.utils.clamp(0, 1, (layoutScrollY - layoutStart) / layoutDistance));
+    const viewportMatchesLayout = () => document.documentElement.clientWidth === layoutWidth
+      && window.innerHeight === layoutHeight;
     let disposed = false;
     let siteRevealTimeline: gsap.core.Timeline | null = null;
     let runtimeCleanup: (() => void) | undefined;
@@ -2376,6 +2396,7 @@ function LiquidReferenceHeroV7Sequence({
       });
 
       if (reducedMotion) {
+        mascot.dataset.referenceTime = "0";
         video?.pause();
         try { if (video) video.currentTime = 0; } catch { /* metadata may not be ready */ }
         setLoadingProgress(100);
@@ -2419,6 +2440,7 @@ function LiquidReferenceHeroV7Sequence({
       const isMobile = window.innerWidth < 900;
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
+      const compactLandscape = isMobile && viewportHeight <= 550;
       const headlineScale = isMobile ? 1.95 : 2.2;
       const compactOpening = viewportWidth < 1100;
       const openingMascotY = viewportHeight * (isMobile ? 0.39 : compactOpening ? 0.42 : 0.46);
@@ -2429,7 +2451,14 @@ function LiquidReferenceHeroV7Sequence({
       const hiddenAbove = viewportHeight * -1.08;
       const settledMascotScale = isMobile ? 0.34 : 0.245;
       const attachedMascotScale = isMobile ? 0.33 : 0.235;
-      const settledMascotY = viewportHeight * (isMobile ? 0.18 : 0.065);
+      const preferredSettledMascotY = viewportHeight * (isMobile ? compactLandscape ? 0.15 : 0.18 : 0.065);
+      // The bottom-origin rig's registration point includes half its unscaled
+      // height. Constrain that point, instead of guessing offsets per viewport.
+      const mascotRegistrationY = viewportHeight / 2 + mascot.offsetHeight / 2;
+      const fitMascotY = (desiredY: number, bottom: number) => useLiquidModel
+        ? Math.min(desiredY, bottom - mascotRegistrationY) : desiredY;
+      const settledMascotY = fitMascotY(preferredSettledMascotY, viewportHeight - 24);
+      const openingSettledMascotY = fitMascotY(preferredSettledMascotY, openingCta.offsetTop - 16);
       const openingCue = (
         cue: keyof typeof V7_GSAP_SECTION_CUE_PLANS.openingHeadline,
         legacyReferenceTime: number,
@@ -2579,6 +2608,14 @@ function LiquidReferenceHeroV7Sequence({
         peak: viewportHeight * (isMobile ? -0.405 : -0.515),
         hold: viewportHeight * (isMobile ? -0.39 : -0.496),
       };
+      const blockHeadlineTop = blockScene.offsetTop - blockScene.offsetHeight / 2;
+      const blockHeadlineBottom = blockScene.offsetTop + blockScene.offsetHeight / 2;
+      const materialMascotBottom = mascotRegistrationY + materialMascotY.hold;
+      const readableHeadlineY = isMobile && useLiquidModel ? gsap.utils.clamp(
+        0,
+        Math.max(0, viewportHeight - 24 - blockHeadlineBottom),
+        materialMascotBottom + 16 - blockHeadlineTop,
+      ) : 0;
       const maskLines = Array.from(
         headlineSvg.querySelectorAll<SVGTextElement>(`.${styles.headlineMaskLine}`),
       );
@@ -2664,6 +2701,7 @@ function LiquidReferenceHeroV7Sequence({
       };
 
       const setInitialState = () => {
+        mascot.dataset.referenceTime = "0";
         contractStateCache = null;
         gsap.set(runtime, { autoAlpha: 1 });
         gsap.set(openingField, {
@@ -2744,7 +2782,7 @@ function LiquidReferenceHeroV7Sequence({
         });
         gsap.set(outline, { xPercent: -50, yPercent: -50, y: stablePhoneY, autoAlpha: 0 });
         gsap.set(outlinePath, { strokeDasharray: 1, strokeDashoffset: 1 });
-        gsap.set(blockScene, { xPercent: -50, yPercent: -50, autoAlpha: 0 });
+        gsap.set(blockScene, { xPercent: -50, yPercent: -50, y: readableHeadlineY, autoAlpha: 0 });
         gsap.set(ghostCells, { autoAlpha: 0.04, scaleY: 0.18, transformOrigin: "50% 100%" });
         gsap.set(sayClipRect, { attr: { y: 350, height: 0 } });
         cards.forEach((card, index) => {
@@ -2817,6 +2855,8 @@ function LiquidReferenceHeroV7Sequence({
         paused: true,
         onUpdate: () => {
           const referenceTime = timeline.time();
+          if (viewportMatchesLayout()) layoutReferenceTime = referenceTime;
+          mascot.dataset.referenceTime = referenceTime.toFixed(4);
           contractStateCache = null;
           syncActiveOpeningWord(referenceTime);
           syncMaterialCurrent(referenceTime);
@@ -2874,7 +2914,7 @@ function LiquidReferenceHeroV7Sequence({
           rotation: 0,
         }, openingCue("mascotArc", 3.5))
         .to(mascot, {
-          y: settledMascotY,
+          y: openingSettledMascotY,
           scale: settledMascotScale,
           duration: 1.75,
           ease: "power2.inOut",
@@ -3148,7 +3188,7 @@ function LiquidReferenceHeroV7Sequence({
         )
         .to(blockScene, {
           autoAlpha: 0,
-          y: viewportHeight * 0.07,
+          y: readableHeadlineY + viewportHeight * 0.07,
           duration: 0.45,
         }, phoneMaterialCue("blockSceneOut", shiftedPhoneTime(18.78)))
         .to(mascot, {
@@ -3814,7 +3854,28 @@ function LiquidReferenceHeroV7Sequence({
           completeStaticReveal("initialization-fallback");
         }
       };
-      void syncAndReveal();
+      if (viewportRestore) {
+        // Rebuild the geometry at the new viewport, then restore the same story beat.
+        // The parent resynchronises Lenis so its previous target cannot undo this seek.
+        ScrollTrigger.refresh();
+        window.dispatchEvent(new CustomEvent(V7_SEQUENCE_NAVIGATION_EVENT, {
+          detail: {
+            referenceTime: viewportRestore.afterSequence === null ? viewportRestore.referenceTime : REFERENCE_PINNED_END,
+            afterSequence: viewportRestore.afterSequence ?? 0,
+            immediate: true,
+          },
+        }));
+        completeStaticReveal("viewport-restored");
+        const restoredTime = viewportRestore.afterSequence === null ? viewportRestore.referenceTime : REFERENCE_PINNED_END;
+        timeline.totalTime(restoredTime, false);
+        if (restoredTime <= 0.001) setInitialState();
+        ScrollTrigger.update();
+        layoutScrollY = window.scrollY;
+        layoutReferenceTime = restoredTime;
+        updateDebug();
+      } else {
+        void syncAndReveal();
+      }
 
       const debugTicker = () => updateDebug();
       if (isLocal && debugRequested) gsap.ticker.add(debugTicker);
@@ -3832,13 +3893,20 @@ function LiquidReferenceHeroV7Sequence({
     }, sequence);
 
     let resizeFrame = 0;
-    let layoutViewportWidth = document.documentElement.clientWidth;
+    const rememberScroll = () => {
+      // A resize may refresh ScrollTrigger before our resize handler runs. Only
+      // record a position while it still belongs to this layout's dimensions.
+      if (viewportMatchesLayout()) layoutScrollY = window.scrollY;
+    };
     const onResize = () => {
-      const nextWidth = document.documentElement.clientWidth;
-      if (Math.abs(nextWidth - layoutViewportWidth) < 2) return;
-      layoutViewportWidth = nextWidth;
+      if (viewportMatchesLayout()) return;
       window.cancelAnimationFrame(resizeFrame);
-      resizeFrame = window.requestAnimationFrame(() => gsap.matchMediaRefresh());
+      viewportRestoreRef.current = {
+        referenceTime: layoutReferenceTime,
+        afterSequence: layoutScrollY >= layoutStart + layoutDistance
+          ? layoutScrollY - layoutStart - layoutDistance : null,
+      };
+      resizeFrame = window.requestAnimationFrame(() => setLayoutRevision(revision => revision + 1));
     };
     const onPageShow = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
@@ -3851,11 +3919,13 @@ function LiquidReferenceHeroV7Sequence({
         timelineRef.current?.totalTime(referenceTimeAtScrollProgress(restoredProgress), false);
       });
     };
+    window.addEventListener("scroll", rememberScroll, { passive: true });
     window.addEventListener("resize", onResize);
     window.addEventListener("pageshow", onPageShow);
 
     return () => {
       disposed = true;
+      window.removeEventListener("scroll", rememberScroll);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pageshow", onPageShow);
       stage.removeEventListener("scroll", resetStageScroll);
@@ -3873,7 +3943,7 @@ function LiquidReferenceHeroV7Sequence({
       runtimeCleanup?.();
       context.revert();
     };
-  }, [prefersReducedMotion, useSafariMascotVideo, useLiquidModel]);
+  }, [prefersReducedMotion, useSafariMascotVideo, useLiquidModel, layoutRevision]);
 
   useEffect(() => {
     if (!V7_MEDIA_RUNTIME_SURFACES.phone) return;
@@ -4878,8 +4948,10 @@ function LiquidReferenceHeroV7Sequence({
                         <strong className={styles.phoneTierName} lang="en">{card.name}</strong>
                         <em className={styles.phoneAvailability} lang="ru">{availabilityLabels[card.tariffId]}</em>
                         <span>{card.label}</span>
-                        <div aria-hidden="true"><i style={{ width: card.progress }} /></div>
-                        <small>{card.detail}</small>
+                        <div className={styles.phoneSummary}>
+                          <small>{card.detail}</small>
+                          <div className={styles.phoneProgress} aria-hidden="true"><i style={{ width: card.progress }} /></div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -5056,20 +5128,26 @@ function LiquidReferenceHeroV7Sequence({
                                   aria-expanded={isActive}
                                   onClick={(event) => {
                                     toolPriceTriggerRef.current = event.currentTarget;
-                                    if (isActive) {
+                                    if (activeToolPriceRef.current === tool && toolPricePinnedRef.current) {
                                       closeToolPrice(false);
                                       return;
                                     }
+                                    // Hover/focus may have previewed this price before the click.
+                                    // First activation keeps it open; subsequent activation closes it.
+                                    toolPricePinnedRef.current = true;
                                     activeToolPriceRef.current = tool;
                                     setActiveToolPrice(tool);
                                   }}
                                   onFocus={(event) => {
+                                    if (toolPriceFocusReturnRef.current) return;
                                     toolPriceTriggerRef.current = event.currentTarget;
+                                    if (activeToolPriceRef.current !== tool) toolPricePinnedRef.current = false;
                                     activeToolPriceRef.current = tool;
                                     setActiveToolPrice(tool);
                                   }}
                                   onPointerEnter={(event) => {
                                     toolPriceTriggerRef.current = event.currentTarget;
+                                    if (activeToolPriceRef.current !== tool) toolPricePinnedRef.current = false;
                                     activeToolPriceRef.current = tool;
                                     setActiveToolPrice(tool);
                                   }}
@@ -5701,10 +5779,16 @@ function V7ApplicationDialog({
     setIsProApplicationVideoReady(false);
     onClose();
   };
+  const revealInvalidField = (field: HTMLElement | null | undefined) => {
+    if (!field) return;
+    field.focus({ preventScroll: true });
+    // This is the fixed, independently scrolling dialog; keep the page underneath still.
+    field.scrollIntoView({ block: "center", behavior: "instant" });
+  };
   const focusFirstFieldError = (errors: Partial<Record<keyof PublicApplicationPayload, string>>) => {
     const firstFieldName = Object.keys(errors).find((name) => !["turnstileToken", "idempotencyKey", "website"].includes(name));
     if (!firstFieldName) return;
-    formRef.current?.querySelector<HTMLElement>(`[name="${firstFieldName}"]`)?.focus({ preventScroll: true });
+    revealInvalidField(formRef.current?.querySelector<HTMLElement>(`[name="${firstFieldName}"]`));
   };
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -5717,7 +5801,7 @@ function V7ApplicationDialog({
         setFieldErrors({ [invalidField.name]: errorMessage });
       }
       setApplicationMessage("Проверьте обязательные поля.");
-      invalidField?.focus({ preventScroll: true });
+      revealInvalidField(invalidField);
       return;
     }
     if (!turnstileToken || isTurnstileLoading) {
@@ -6583,6 +6667,7 @@ function LiquidReferenceHeroV7NormalFlow({
     let targetBoost = 0;
     let isVisible = false;
     let hasMeasured = false;
+    let focusWithin = section.contains(document.activeElement);
     let isReduced = motionPreference.matches;
     let lastInputTimestamp = Number.NEGATIVE_INFINITY;
     let previousScrollTimestamp = performance.now();
@@ -6600,6 +6685,21 @@ function LiquidReferenceHeroV7NormalFlow({
       });
     };
 
+    const revealFocusedTool = (element: Element | null = document.activeElement) => {
+      if (isReduced || !(element instanceof HTMLElement)) return;
+      rows.forEach((row, index) => {
+        if (!row.mask || !row.track.contains(element)) return;
+        // Native focus can scroll the overflow mask; the track owns horizontal placement.
+        row.mask.scrollLeft = 0;
+        const mask = row.mask.getBoundingClientRect();
+        const control = element.getBoundingClientRect();
+        const inset = 8;
+        const shift = control.left < mask.left + inset ? mask.left + inset - control.left
+          : control.right > mask.right - inset ? mask.right - inset - control.right : 0;
+        positions[index] += shift;
+      });
+      applyPositions();
+    };
     const measure = () => {
       if (isReduced) return;
       setWidths = rows.map((row) => Math.max(row.set?.getBoundingClientRect().width ?? 1, 1));
@@ -6612,6 +6712,7 @@ function LiquidReferenceHeroV7NormalFlow({
         ));
       }
       applyPositions();
+      if (focusWithin) revealFocusedTool();
     };
     const handleScroll = () => {
       const nextScrollY = window.scrollY;
@@ -6647,7 +6748,7 @@ function LiquidReferenceHeroV7NormalFlow({
     };
     const tick = (timestamp: number) => {
       animationFrame = 0;
-      if (!isVisible || document.visibilityState !== "visible") return;
+      if (focusWithin || !isVisible || document.visibilityState !== "visible") return;
       const deltaSeconds = Math.min((timestamp - previousTimestamp) / 1000, 0.05);
       previousTimestamp = timestamp;
       const inputIsActive = timestamp - lastInputTimestamp <= INPUT_HOLD_MS;
@@ -6672,11 +6773,21 @@ function LiquidReferenceHeroV7NormalFlow({
       animationFrame = 0;
     };
     const startTicker = () => {
-      if (animationFrame || isReduced || !isVisible || document.visibilityState !== "visible") return;
+      if (animationFrame || focusWithin || isReduced || !isVisible || document.visibilityState !== "visible") return;
       previousTimestamp = performance.now();
       previousScrollTimestamp = previousTimestamp;
       previousScrollY = window.scrollY;
       animationFrame = window.requestAnimationFrame(tick);
+    };
+    const handleFocusIn = (event: FocusEvent) => {
+      focusWithin = true;
+      stopTicker();
+      revealFocusedTool(event.target instanceof Element ? event.target : null);
+    };
+    const handleFocusOut = (event: FocusEvent) => {
+      if (event.relatedTarget instanceof Node && section.contains(event.relatedTarget)) return;
+      focusWithin = false;
+      startTicker();
     };
     const visibilityObserver = new IntersectionObserver(
       ([entry]) => {
@@ -6726,12 +6837,16 @@ function LiquidReferenceHeroV7NormalFlow({
       if (row.mask) resizeObserver.observe(row.mask);
       if (row.set) resizeObserver.observe(row.set);
     });
+    section.addEventListener("focusin", handleFocusIn);
+    section.addEventListener("focusout", handleFocusOut);
     window.addEventListener("scroll", handleScroll, { passive: true });
     document.addEventListener("visibilitychange", syncDocumentVisibility);
     motionPreference.addEventListener("change", syncMotionPreference);
 
     return () => {
       stopTicker();
+      section.removeEventListener("focusin", handleFocusIn);
+      section.removeEventListener("focusout", handleFocusOut);
       window.removeEventListener("scroll", handleScroll);
       document.removeEventListener("visibilitychange", syncDocumentVisibility);
       motionPreference.removeEventListener("change", syncMotionPreference);
@@ -7349,9 +7464,10 @@ export function LiquidReferenceHeroV7() {
     let bookingNavigationTimers: number[] = [];
 
     const handleSequenceNavigation = (event: Event) => {
-      const requestedReferenceTime = (
-        event as CustomEvent<{ referenceTime?: number }>
-      ).detail?.referenceTime;
+      const detail = (event as CustomEvent<{
+        referenceTime?: number; immediate?: boolean; afterSequence?: number;
+      }>).detail;
+      const requestedReferenceTime = detail?.referenceTime;
       if (!Number.isFinite(requestedReferenceTime)) return;
       const sequence = document.querySelector<HTMLElement>(
         '[data-testid="liquid-reference-v7-sequence"]',
@@ -7364,13 +7480,29 @@ export function LiquidReferenceHeroV7() {
       );
       const targetScroll = sequence.offsetTop
         + scrollProgressAtReferenceTime(referenceTime)
-          * Math.max(0, sequence.offsetHeight - window.innerHeight);
+          * Math.max(0, sequence.offsetHeight - window.innerHeight)
+        + (detail?.afterSequence ?? 0);
       const lenis = lenisRef.current;
       if (!motionPreference.matches && lenis) {
-        lenis.scrollTo(targetScroll, { duration: 1.05, force: true });
+        if (detail?.immediate) lenis.resize();
+        lenis.scrollTo(targetScroll, { duration: 1.05, force: true, immediate: detail?.immediate });
         return;
       }
       window.scrollTo({ top: targetScroll, behavior: "auto" });
+    };
+
+    const interruptWheelForKeyboard = (event: KeyboardEvent) => {
+      const lenis = lenisRef.current;
+      if (event.defaultPrevented || smoothScrollLockCountRef.current > 0
+        || lenis?.isScrolling !== "smooth" || lenis.isStopped
+        || !["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.closest("input, textarea, select, [contenteditable], [role='slider'], [role='listbox'], [role='combobox']")
+        || (event.key === " " && target?.closest("button, [role='button']"))) return;
+      // Hand control to the browser's native key action at the actual position.
+      // stop/start resets the pending wheel target without consuming that action.
+      lenis.stop();
+      lenis.start();
     };
 
     const clearBookingNavigationTimers = () => {
@@ -7449,12 +7581,14 @@ export function LiquidReferenceHeroV7() {
     };
 
     syncSmoothScroll();
+    window.addEventListener("keydown", interruptWheelForKeyboard);
     window.addEventListener(V7_SEQUENCE_NAVIGATION_EVENT, handleSequenceNavigation);
     window.addEventListener(V7_BOOKING_NAVIGATION_EVENT, handleBookingNavigation);
     motionPreference.addEventListener("change", syncSmoothScroll);
     return () => {
       clearBookingNavigationTimers();
       window.cancelAnimationFrame(refreshFrame);
+      window.removeEventListener("keydown", interruptWheelForKeyboard);
       window.removeEventListener(V7_SEQUENCE_NAVIGATION_EVENT, handleSequenceNavigation);
       window.removeEventListener(V7_BOOKING_NAVIGATION_EVENT, handleBookingNavigation);
       motionPreference.removeEventListener("change", syncSmoothScroll);
