@@ -7287,7 +7287,33 @@ export function LiquidReferenceHeroV7() {
       );
     }
 
+    // Static Pages can restore before React has mounted the tall scroll scene.
+    // Restore reloads after that scene exists, before its reveal timeline settles.
+    const reloadScrollKey = "liquid-v7-reload-scroll";
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(reloadScrollKey) ?? "null") as {
+        href?: string; y?: number;
+      } | null;
+      sessionStorage.removeItem(reloadScrollKey);
+      const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+      // WebKit may expose Navigation Timing entries only after the load event.
+      const isReload = navigation?.type === "reload"
+        || (!navigation && performance.navigation?.type === 1);
+      if (isReload && saved?.href === window.location.href
+        && typeof saved.y === "number" && Number.isFinite(saved.y) && saved.y > 0) {
+        window.scrollTo({ top: saved.y, behavior: "instant" });
+        ScrollTrigger.update();
+      }
+    } catch { /* Native restoration remains available when storage is blocked. */ }
+    const rememberReloadScroll = () => {
+      try {
+        sessionStorage.setItem(reloadScrollKey, JSON.stringify({ href: window.location.href, y: window.scrollY }));
+      } catch { /* Storage is optional. */ }
+    };
+    window.addEventListener("pagehide", rememberReloadScroll);
+
     return () => {
+      window.removeEventListener("pagehide", rememberReloadScroll);
       window.history.scrollRestoration = previousScrollRestoration;
     };
   }, []);

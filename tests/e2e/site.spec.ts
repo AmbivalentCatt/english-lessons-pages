@@ -137,3 +137,23 @@ test("has no horizontal document overflow at the active viewport", async ({ page
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });
+
+
+test("restores the scroll scene when a static reload waits for the application script", async ({ page }) => {
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-reveal-state="complete"]')).toBeVisible();
+  await page.evaluate(() => {
+    const sequence = document.querySelector<HTMLElement>('[data-testid="liquid-reference-v7-sequence"]')!;
+    window.scrollTo({ top: sequence.offsetTop + (sequence.offsetHeight - innerHeight) * .75, behavior: "instant" });
+  });
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(1000);
+  const previousY = await page.evaluate(() => scrollY);
+  await page.route("**/assets/index-*.js", async route => {
+    await new Promise(resolve => setTimeout(resolve, 700));
+    await route.continue();
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-reveal-state="complete"]')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeCloseTo(previousY, 0);
+  await expect(page.locator('[data-liquid-motion-rig]')).toBeVisible();
+});
