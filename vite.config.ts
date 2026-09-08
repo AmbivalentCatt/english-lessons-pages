@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => {
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",
             "media-src 'self' blob:",
-            `connect-src 'self' ${apiOrigin} https://challenges.cloudflare.com`,
+            `connect-src 'self' blob: ${apiOrigin} https://challenges.cloudflare.com`,
             "font-src 'self' data:",
             "frame-src https://challenges.cloudflare.com",
             "worker-src 'self' blob:",

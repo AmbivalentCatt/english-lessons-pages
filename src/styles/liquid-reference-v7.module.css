@@ -3042,6 +3042,31 @@
   overflow: visible;
 }
 
+.liquidModel {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.liquidModel canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.liquidModelFallback {
+  position: absolute;
+  top: -4.2%;
+  left: -6%;
+  width: 112%;
+  height: 112%;
+  object-fit: contain;
+}
+
+.liquidModel[data-ready="true"] .liquidModelFallback {
+  display: none;
+}
+
 .mediaCanvas {
   position: absolute;
   top: -4.2%;

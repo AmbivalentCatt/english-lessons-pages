@@ -4,6 +4,7 @@ import Image from "@/components/StaticImage";
 import { AstraExperience } from "@/components/astra/AstraExperience";
 import { OpeningDepthLayers } from "@/components/astra/OpeningDepthLayers";
 import lowerStyles from "@/components/astra/astra-lower.module.css";
+import { LiquidModel } from "@/components/astra/LiquidModel";
 import { PawTrail } from "@/components/astra/PawTrail";
 import {
   createContext,
@@ -1455,6 +1456,8 @@ function LiquidReferenceHeroV7Sequence({
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const triggerRef = useRef<ScrollTrigger | null>(null);
   const sequenceContractStateRef = useRef<V7SequenceState | null>(null);
+  const [modelFailed, setModelFailed] = useState(false);
+  const useLiquidModel = import.meta.env.VITE_LIQUID_3D !== "0" && !modelFailed;
   const [videoFailed, setVideoFailed] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [gazeVideoFailed, setGazeVideoFailed] = useState(false);
@@ -1881,7 +1884,7 @@ function LiquidReferenceHeroV7Sequence({
       !phoneBody || !phoneMaterial || !phoneAnchor || !outline || !outlinePath ||
       phoneUiStates.length !== phoneUiCards.length || !blockScene || !blockGrid ||
       !sayClipRect || cards.length !== 4 ||
-      !mascot || !video || !cue || !violetField || !violetMedallions || !secondHeadline ||
+      !mascot || (!useLiquidModel && !video) || !cue || !violetField || !violetMedallions || !secondHeadline ||
       !secondCta || !blueField || !coralField || !coralHeadline || !lessonObject || !lessonGlint ||
       !proTierAtmosphere || !proFocalConvergence ||
       !proofWall || proofCardElements.length !== proofCards.length || !navyField ||
@@ -1923,7 +1926,7 @@ function LiquidReferenceHeroV7Sequence({
         !sayClipRect && "sayClipRect",
         cards.length !== 4 && `cards:${cards.length}`,
         !mascot && "mascot",
-        !video && "video",
+        !useLiquidModel && !video && "video",
         !cue && "cue",
         !violetField && "violetField",
         !violetMedallions && "violetMedallions",
@@ -2371,8 +2374,8 @@ function LiquidReferenceHeroV7Sequence({
       });
 
       if (reducedMotion) {
-        video.pause();
-        try { video.currentTime = 0; } catch { /* metadata may not be ready */ }
+        video?.pause();
+        try { if (video) video.currentTime = 0; } catch { /* metadata may not be ready */ }
         setLoadingProgress(100);
         gsap.set(runtime, { autoAlpha: 1 });
         gsap.set(openingField, { autoAlpha: 1, clipPath: "inset(0 0 0 0)" });
@@ -3607,9 +3610,9 @@ function LiquidReferenceHeroV7Sequence({
             visibleOpacity(secondCta),
             visibleOpacity(finalCta),
           ),
-          videoCurrentSrc: video.currentSrc,
-          videoDuration: Number.isFinite(video.duration) ? video.duration : 0,
-          videoCurrentTime: video.currentTime,
+          videoCurrentSrc: video?.currentSrc ?? "",
+          videoDuration: video && Number.isFinite(video.duration) ? video.duration : 0,
+          videoCurrentTime: video?.currentTime ?? 0,
           videoCount: sequence.querySelectorAll("video").length,
           scrollTriggerCount: ScrollTrigger.getAll().length,
           horizontalOverflow: Math.max(
@@ -3741,7 +3744,7 @@ function LiquidReferenceHeroV7Sequence({
           if (disposed) return;
           if (
             useSafariMascotVideo === false
-            && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+            && video && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
           ) {
             setVideoReady(true);
           }
@@ -3868,7 +3871,7 @@ function LiquidReferenceHeroV7Sequence({
       runtimeCleanup?.();
       context.revert();
     };
-  }, [prefersReducedMotion, useSafariMascotVideo]);
+  }, [prefersReducedMotion, useSafariMascotVideo, useLiquidModel]);
 
   useEffect(() => {
     if (!V7_MEDIA_RUNTIME_SURFACES.phone) return;
@@ -4210,7 +4213,7 @@ function LiquidReferenceHeroV7Sequence({
   }, []);
 
   useEffect(() => {
-    if (!V7_MEDIA_RUNTIME_SURFACES.mascot) return;
+    if (useLiquidModel || !V7_MEDIA_RUNTIME_SURFACES.mascot) return;
     if (useSafariMascotVideo === null) return;
     const baseVideo = videoRef.current;
     const gazeVideo = gazeVideoRef.current;
@@ -4233,10 +4236,10 @@ function LiquidReferenceHeroV7Sequence({
       onBridgePhase: setMascotBridgePhase,
     });
     return () => lease.dispose();
-  }, [mediaRuntime, useSafariMascotVideo]);
+  }, [mediaRuntime, useSafariMascotVideo, useLiquidModel]);
 
   useEffect(() => {
-    if (V7_MEDIA_RUNTIME_SURFACES.mascot) return;
+    if (useLiquidModel || V7_MEDIA_RUNTIME_SURFACES.mascot) return;
     if (useSafariMascotVideo === null) {
       videoRef.current?.pause();
       gazeVideoRef.current?.pause();
@@ -4551,11 +4554,13 @@ function LiquidReferenceHeroV7Sequence({
       baseVideo.pause();
       gazeVideo.pause();
     };
-  }, [useSafariMascotVideo]);
+  }, [useSafariMascotVideo, useLiquidModel]);
 
   const activeTier = phoneUiCards[activeTierIndex];
   const activeTariff = tariffs[activeTierIndex];
-  const mascotRenderer = prefersReducedMotion === true
+  const mascotRenderer = useLiquidModel
+    ? "rigged-3d"
+    : prefersReducedMotion === true
     ? "poster"
     : useSafariMascotVideo === true
       ? "safari-packed-alpha"
@@ -5319,7 +5324,7 @@ function LiquidReferenceHeroV7Sequence({
                   </filter>
                 </defs>
               </svg>
-              <div className={styles.mascotMotionRig} ref={mascotRef}>
+              <div className={styles.mascotMotionRig} data-liquid-motion-rig ref={mascotRef}>
                 <div className={styles.mascotDepthRig} data-astra-depth="mascot">
                 <div
                   className={styles.mascotVisibleCrop}
@@ -5331,6 +5336,7 @@ function LiquidReferenceHeroV7Sequence({
                   data-video-failed={videoFailed ? "true" : "false"}
                   data-video-ready={videoReady ? "true" : "false"}
                 >
+                  {useLiquidModel ? <LiquidModel onError={setModelFailed} /> : (<>
                   <div
                     className={`${styles.mediaCanvas} ${styles.posterCanvas}`}
                     style={mascotRenderer === "alpha-video"
@@ -5440,6 +5446,7 @@ function LiquidReferenceHeroV7Sequence({
                       </video>
                     )}
                   </div>
+                  </>)}
                 </div>
                 </div>
               </div>

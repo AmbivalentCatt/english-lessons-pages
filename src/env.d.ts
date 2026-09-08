@@ -1,4 +1,5 @@
 interface ImportMetaEnv {
+  readonly VITE_LIQUID_3D?: string;
   readonly VITE_APPLICATION_API_BASE?: string;
   readonly VITE_PUBLIC_SITE_URL?: string;
   readonly VITE_TURNSTILE_SITE_KEY?: string;
