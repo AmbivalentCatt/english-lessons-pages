@@ -342,6 +342,29 @@
   pointer-events: none;
 }
 
+.loadingRecovery {
+  position: absolute;
+  z-index: 101;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(90%, 520px);
+  padding: 16px;
+  border: 1px solid rgb(220 247 247 / 35%);
+  border-radius: 16px;
+  background: #042a35;
+  color: #e1f7f7;
+  text-align: center;
+  pointer-events: auto;
+}
+.loadingRecovery p { margin: 0 0 12px; font-size: 14px; line-height: 1.45; }
+.loadingRecovery button {
+  margin: 4px; padding: 10px 14px; border: 1px solid currentColor;
+  border-radius: 24px; background: transparent; color: inherit; font: inherit;
+  font-size: 13px; cursor: pointer;
+}
+.loadingRecovery button:focus-visible { outline: 3px solid #ffc499; outline-offset: 3px; }
+
 .stage[data-reveal-state="complete"] .preinitFrame {
   display: none;
   visibility: hidden;
@@ -7068,7 +7091,11 @@
 @media (pointer: coarse) and (prefers-reduced-motion: no-preference) {
   .page[data-device-tilt="true"] .baseBackground { inset: -3%; transform: translate3d(calc(var(--scene-x, 0) * -10px), calc(var(--scene-y, 0) * -8px), 0); }
   .page[data-device-tilt="true"] .openingHeadlineSystem { translate: calc(var(--scene-x, 0) * 5px) calc(var(--scene-y, 0) * 3px); }
+  .phoneDepthRig { --touch-depth: 4px; }
+  .cardDepthRig { --touch-depth: calc(var(--depth-distance) * 0.25); }
+  .utilityDepthRig { --touch-depth: calc(var(--utility-depth) * 0.25); }
+  .proofDepthRig { --touch-depth: calc(var(--proof-depth) * 0.25); }
   .page[data-device-tilt="true"] :is(.phoneDepthRig, .cardDepthRig, .utilityDepthRig, .proofDepthRig) {
-    transform: perspective(1100px) translate3d(calc(var(--scene-x, 0) * 4px), calc(var(--scene-y, 0) * 3px), 0) rotateX(calc(var(--scene-y, 0) * -2deg)) rotateY(calc(var(--scene-x, 0) * 3deg));
+    transform: perspective(1100px) translate3d(calc(var(--scene-x, 0) * var(--touch-depth)), calc(var(--scene-y, 0) * var(--touch-depth) * 0.65), 0) rotateX(calc(var(--scene-y, 0) * -3deg)) rotateY(calc(var(--scene-x, 0) * 5deg));
   }
 }

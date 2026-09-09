@@ -1,4 +1,4 @@
-import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef } from "react";
 import styles from "@/styles/liquid-reference-v7.module.css";
 
 type ModelHandle = { dispose(): void };
@@ -7,7 +7,7 @@ type ModelModule = {
 };
 
 // Render inside the existing GSAP mascot rig; this component never owns its route.
-export function LiquidModel({ onError }: { onError: Dispatch<SetStateAction<boolean>> }) {
+export function LiquidModel({ onError, attempt }: { onError: () => void; attempt: number }) {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -16,15 +16,20 @@ export function LiquidModel({ onError }: { onError: Dispatch<SetStateAction<bool
     let disposed = false;
     let model: ModelHandle | undefined;
     // Absolute URL keeps the self-contained module on Vite's static-asset route.
-    const runtimeUrl = new URL("/media/liquid-3d/runtime.js?v=mobile4", window.location.href).href;
-    const fail = () => { if (!disposed) onError(true); };
-    void (import(/* @vite-ignore */ runtimeUrl) as Promise<ModelModule>)
+    const runtimeUrl = new URL("/media/liquid-3d/runtime.js?v=mobile5", window.location.href).href;
+    host.dataset.loadState = "importing";
+    host.dataset.loadProgress = "2";
+    const attemptUrl = attempt ? `${runtimeUrl}&retry=${attempt}` : runtimeUrl;
+    const fail = () => {
+      if (!disposed) { host.dataset.error = "true"; onError(); }
+    };
+    void (import(/* @vite-ignore */ attemptUrl) as Promise<ModelModule>)
       .then(({ mountLiquidModel }) => {
         if (!disposed) model = mountLiquidModel(host, { onError: fail });
       })
       .catch(fail);
     return () => { disposed = true; model?.dispose(); };
-  }, [onError]);
+  }, [onError, attempt]);
 
   return (
     <div className={styles.liquidModel} data-liquid-model data-ready="false" ref={hostRef}>

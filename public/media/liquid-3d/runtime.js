@@ -206,14 +206,21 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
     const response=await fetch(asset(name),{signal:abort.signal,cache:attempt?'reload':'default'});
     if(!response.ok)throw new Error(`Liquid model unavailable (${response.status})`);
     // Some hosts supply Content-Encoding themselves, which fetch already decodes.
+    let received=0;
+    const size=Number(response.headers.get('Content-Length'));
+    const downloading=response.body.pipeThrough(new TransformStream({transform(chunk,controller){
+     received+=chunk.byteLength;
+     if(size>0)stage.dataset.loadProgress=String(10+Math.round(Math.min(1,received/size)*65));
+     controller.enqueue(chunk);
+    }}));
     const stream=compressed&&!response.headers.get('Content-Encoding')?.includes('gzip')
-     ?response.body.pipeThrough(new DecompressionStream('gzip')):response.body;
+     ?downloading.pipeThrough(new DecompressionStream('gzip')):downloading;
     return await new Response(stream).arrayBuffer();
    }catch(error){if(disposed||error.name==='AbortError'||attempt===1)throw error;}
   }
  }
  async function load(){
-  stage.dataset.loadState='fetching';
+  stage.dataset.loadState='fetching';stage.dataset.loadProgress='10';
   let buffer;
   if(typeof DecompressionStream!=='undefined'){
    try{buffer=await fetchModel(compressedName,true);}
@@ -222,7 +229,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   // The exact source GLB remains a compatibility fallback for older browsers.
   buffer??=await fetchModel(modelName);
   if(disposed)return;
-  stage.dataset.loadState='parsing';
+  stage.dataset.loadState='parsing';stage.dataset.loadProgress='78';
   const gltf=await new GLTFLoader().parseAsync(buffer,asset('./'));
   trackResources(gltf.scene);if(disposed){releaseResources();return;}
  model=gltf.scene;clips=gltf.animations;
@@ -245,8 +252,13 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
  const idle=clips.find(clip=>clip.name==='Liquid_Idle');
  if(!idle||!headBone||eyeBones.length!==2||!closedPaint.value||!rimPaint.value||!contourField.value)throw new Error('Liquid rig is incomplete');
  action=mixer.clipAction(idle);action.play();
- cacheClipPose();ready=true;stage.dataset.clips=clips.map(c=>c.name).join(',');
-  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-mobile4';
+ cacheClipPose();stage.dataset.clips=clips.map(c=>c.name).join(',');
+ stage.dataset.loadState='warming';stage.dataset.loadProgress='90';
+ // Compile the real skin/eye shaders behind the loader before the first reveal.
+ await renderer.compileAsync(scene,camera);
+ if(disposed)return;
+ ready=true;
+  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-mobile5';
  resize();wake();
 
  trackResources(model);
@@ -254,7 +266,10 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
  function frame(now){
   raf=0;if(disposed||!ready)return;
   const visible=stageVisible&&!document.hidden&&rig?.style.visibility!=='hidden'&&Number(rig?.style.opacity||1)>.001;
-  if(!visible){stage.dataset.paused='true';return;}
+  // One hidden frame uploads textures and proves that the interactive rig can
+  // render. Afterwards an inactive rig sleeps as before; loader gating cannot
+  // deadlock against a mascot whose scroll pose currently has zero opacity.
+  if(document.hidden||(!visible&&stage.dataset.ready==='true')){stage.dataset.paused='true';return;}
   // GSAP still updates the outer route on every frame. Rendering at the
   // displayed size avoids shading a full-size canvas for a tiny phone mascot.
   const interval=now-lastScroll<180?1000/15:1000/30;
@@ -266,7 +281,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   const realDt=Math.min(.1,(now-previous)/1000);previous=now;
   const dt=reduced.matches?0:realDt;elapsed+=dt;measurePointer();
   if(reduced.matches){restoreRest();pivot.rotation.set(0,0,0);look.set(0,0);followWeight=0;setBlink(0);}
-  else{restoreClipPose();mixer.update(dt);cacheClipPose();setBlink(THREE.MathUtils.clamp(applyWebsiteMotion(dt,action.time),0,1));}
+  else{restoreClipPose();mixer.update(dt);setBlink(THREE.MathUtils.clamp(applyWebsiteMotion(dt,action.time),0,1));}
   alignEyeCenters();rimBlink.value=readBlink();
   atmosphere.update(realDt,reduced.matches);
   stage.dataset.clipTime=action.time.toFixed(3);stage.dataset.blink=rimBlink.value.toFixed(3);
@@ -274,7 +289,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   stage.dataset.followWeight=followWeight.toFixed(3);stage.dataset.pointerInside=String(pointerInside);
   stage.dataset.headQuaternion=headBone.quaternion.toArray().map(x=>x.toFixed(5)).join(',');
   stage.dataset.paused=String(reduced.matches);stage.dataset.mode=deviceTilt?'tilt':'follow';
-  if(!reduced.matches||dirty){renderer.render(scene,camera);dirty=false;stage.dataset.ready='true';stage.dataset.loadState='ready';}
+  if(!reduced.matches||dirty){renderer.render(scene,camera);dirty=false;stage.dataset.ready='true';stage.dataset.loadState='ready';stage.dataset.loadProgress='100';}
   if(!reduced.matches)raf=requestAnimationFrame(frame);
  }
  resize();void load().catch(error=>{if(error.name!=='AbortError')fail(error);});

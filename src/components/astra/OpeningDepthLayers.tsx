@@ -33,6 +33,7 @@ export function OpeningDepthLayers() {
     const texture = gl.createTexture();
     let disposed = false;
     let ready = false;
+    let active = true;
     let pointer = [0, 0];
     let fit = [1, 1];
     try {
@@ -79,7 +80,7 @@ export function OpeningDepthLayers() {
     const pointerUniform = gl.getUniformLocation(program, "u_pointer");
     const fitUniform = gl.getUniformLocation(program, "u_fit");
     const draw = () => {
-      if (!ready || disposed || document.hidden) return;
+      if (!ready || !active || disposed || document.hidden) return;
       gl.uniform2f(pointerUniform, pointer[0], pointer[1]);
       gl.uniform2f(fitUniform, fit[0], fit[1]);
       gl.drawArrays(gl.TRIANGLES,0,6);
@@ -94,7 +95,8 @@ export function OpeningDepthLayers() {
       draw();
     };
     const onPointer = (event: Event) => {
-      const detail = (event as CustomEvent<{ x: number; y: number }>).detail;
+      const detail = (event as CustomEvent<{ x: number; y: number; active: boolean }>).detail;
+      active = detail.active;
       pointer = [detail.x, detail.y]; draw();
     };
     const onLost = (event: Event) => { event.preventDefault(); ready = false; canvas.dataset.ready = "false"; };

@@ -228,7 +228,7 @@ describe("per-tariff public availability confirmations", () => {
     expect(body.availability.fresh).toBe(false);
     expect(body.availability.tariffs.premium).toMatchObject({ status: "fresh", remaining: 2 });
     expect(body.availability.tariffs.basic.status).toBe("confirmation-required");
-    expect(body.availability.tariffs.standard.status).toBe("confirmation-required");
+    expect(body.availability.tariffs.standard).toMatchObject({ status: "fresh", remaining: 0 });
     expect(body.availability.tariffs.basic).not.toHaveProperty("remaining");
   });
 

@@ -200,16 +200,46 @@ test("opt-in phone tilt drives existing depth and Liquid, then resets safely", a
   await send(48, 16);
   await expect(model).toHaveAttribute('data-mode', 'tilt');
   await expect.poll(() => model.getAttribute('data-eye-x').then(Number)).toBeGreaterThan(.25);
-  await expect.poll(() => page.locator('[data-liquid-v7-main]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeGreaterThan(.4);
-  await page.screenshot({ path: testInfo.outputPath('phone-tilt.png') });
+  await expect.poll(() => page.locator('[class*=phoneDepthRig]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeGreaterThan(.4);
+  await page.evaluate(() => dispatchEvent(new CustomEvent('liquid-v7:navigate-to-reference', {
+    detail: { referenceTime: 21.8, immediate: true },
+  })));
+  await expect.poll(() => page.locator('[data-liquid-motion-rig]').getAttribute('data-reference-time').then(Number)).toBeCloseTo(21.8, 1);
+  const surfaces = page.locator('[class*=phoneDepthRig], [class*=cardDepthRig]');
+  await expect(surfaces).toHaveCount(5);
+  const transforms = () => surfaces.evaluateAll(elements => elements.map(element => {
+    const matrix = new DOMMatrix(getComputedStyle(element).transform);
+    return { x: matrix.m41, y: matrix.m42, yaw: matrix.m13 };
+  }));
+  await expect.poll(async () => (await transforms()).every(matrix => matrix.x > 1.5 && Math.abs(matrix.yaw) > .02)).toBe(true);
+  const right = await transforms();
+  expect(new Set(right.map(matrix => matrix.x.toFixed(2))).size).toBe(5);
+  await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointerout', {
+    pointerType: 'touch', relatedTarget: null, bubbles: true,
+  })));
+  await page.waitForTimeout(200);
+  expect((await transforms()).every(matrix => matrix.x > 1.5)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('phone-five-cards-tilt-right.png') });
+  await send(43, -16);
+  await expect.poll(async () => (await transforms()).every(matrix => matrix.x < -1.5)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('phone-five-cards-tilt-left.png') });
+  await page.evaluate(() => dispatchEvent(new CustomEvent('liquid-v7:navigate-to-reference', {
+    detail: { referenceTime: 31.4, immediate: true },
+  })));
+  await expect.poll(() => page.locator('[data-liquid-motion-rig]').getAttribute('data-reference-time').then(Number)).toBeCloseTo(31.4, 1);
+  await expect.poll(() => page.locator('[class*=proofDepthRig]').evaluateAll(elements =>
+    elements.every(element => new DOMMatrix(getComputedStyle(element).transform).m41 < -1.5))).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('phone-pro-proof-tilt.png') });
+  await page.evaluate(() => dispatchEvent(new CustomEvent('liquid-v7:navigate-to-reference', { detail: { referenceTime: 0, immediate: true } })));
+  await expect(control).toBeVisible();
   await page.evaluate(() => {
     Object.defineProperty(screen.orientation, "angle", { configurable: true, value: 90 });
     dispatchEvent(new Event('orientationchange'));
   });
   await send(12, -25);
-  await expect.poll(() => page.locator('[data-liquid-v7-main]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeCloseTo(0, 2);
+  await expect.poll(() => page.locator('[class*=phoneDepthRig]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeCloseTo(0, 2);
   await send(100, -25);
-  await expect.poll(() => page.locator('[data-liquid-v7-main]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeCloseTo(.65, 2);
+  await expect.poll(() => page.locator('[class*=phoneDepthRig]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeCloseTo(.65, 2);
   await control.tap();
   await expect(control).toHaveAttribute('aria-pressed', 'false');
   await expect(model).toHaveAttribute('data-mode', 'follow');

@@ -79,7 +79,7 @@ export function DeviceTiltControl() {
   if (!available) return null;
   return <button type="button" className={styles.control} onClick={toggle}
     aria-label="Наклон устройства" aria-pressed={state === "on"} disabled={state === "pending"}
-    title={state === "denied" ? "Доступ к движению не разрешён. Можно повторить запрос." : "Наклоняйте телефон: Liquid и фон мягко следуют за движением."}
+    title={state === "denied" ? "Доступ к движению не разрешён. Можно повторить запрос." : "Наклоняйте телефон: Liquid, фон и карточки мягко следуют за движением."}
     data-device-tilt-control={state} lang="ru">
     {state === "on" ? "Наклон включён" : state === "pending" ? "Разрешить наклон…" : state === "denied" ? "Наклон недоступен" : "Включить наклон"}
   </button>;

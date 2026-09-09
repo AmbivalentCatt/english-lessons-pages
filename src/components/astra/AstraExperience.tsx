@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import styles from "@/styles/liquid-reference-v7.module.css";
 import { referenceTimeAtScrollProgress } from "@/lib/v7-sequence-contract";
 /** Pointer wrappers own depth; GSAP retains exclusive ownership of scroll transforms. */
 export function AstraExperience() {
@@ -14,14 +15,31 @@ export function AstraExperience() {
     const target = { x: 0, y: 0 };
     const current = { ...target };
     let sceneVisible = true;
+    let openingVisible = true;
+    const depthSurfaces = Array.from(page.querySelectorAll<HTMLElement>([
+      styles.baseBackground, styles.openingHeadlineSystem, styles.phoneDepthRig,
+      styles.cardDepthRig, styles.utilityDepthRig, styles.proofDepthRig, styles.blueField,
+    ].map(name => `.${name}`).join(",") + ",[data-depth-kind]"));
+    const lightSurfaces = Array.from(page.querySelectorAll<HTMLElement>(`.${styles.openingField}, .${styles.proofWall} button`));
+    const setProperty = (element: HTMLElement, name: string, value: string) => {
+      if (element.style.getPropertyValue(name) !== value) element.style.setProperty(name, value);
+    };
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
     const writePointer = () => {
-      page.style.setProperty("--scene-x", String(current.x));
-      page.style.setProperty("--scene-y", String(current.y));
-      window.dispatchEvent(new CustomEvent("astra:depth-pointer", { detail: { x: current.x, y: current.y } }));
-      page.style.setProperty("--light-x", `${50 + current.x * 45}%`);
-      page.style.setProperty("--light-y", `${50 + current.y * 45}%`);
+      // Scope changing custom properties to their consumers. Inheriting them
+      // from <main> invalidated every scene, SVG and booking field on each tick.
+      for (const surface of depthSurfaces) {
+        setProperty(surface, "--scene-x", current.x.toFixed(4));
+        setProperty(surface, "--scene-y", current.y.toFixed(4));
+      }
+      window.dispatchEvent(new CustomEvent("astra:depth-pointer", {
+        detail: { x: current.x, y: current.y, active: openingVisible && sceneVisible },
+      }));
+      for (const surface of lightSurfaces) {
+        setProperty(surface, "--light-x", `${(50 + current.x * 45).toFixed(2)}%`);
+        setProperty(surface, "--light-y", `${(50 + current.y * 45).toFixed(2)}%`);
+      }
     };
     const animatePointer = (now: number) => {
       pointerFrame = 0;
@@ -56,12 +74,14 @@ export function AstraExperience() {
       const inBooking = window.scrollY >= sequence.offsetTop + distance;
       sceneVisible = !inBooking && window.scrollY + window.innerHeight > sequence.offsetTop;
       if (!sceneVisible) resetPointer();
+      const nextOpeningVisible = time < 10.7 && sceneVisible;
+      if (openingVisible !== nextOpeningVisible) { openingVisible = nextOpeningVisible; writePointer(); }
       sequence.dataset.astraOpening = time < 0.9 ? "true" : "false";
-      page.style.setProperty("--opening-depth-opacity", String(Math.max(0, Math.min(1, (10.7 - time) / 1.5))));
-      page.style.setProperty("--opening-travel", String(Math.max(0, Math.min(1, time / 10.7))));
+      setProperty(page, "--opening-depth-opacity", String(Math.max(0, Math.min(1, (10.7 - time) / 1.5))));
+      setProperty(page, "--opening-travel", String(Math.max(0, Math.min(1, time / 10.7))));
       const travel = time >= 19.85 && time < 23 ? (time - 21.5) * 0.55
         : time >= 25.34 && time < 27.75 ? (time - 26.45) * 0.75 : 0;
-      page.style.setProperty("--scene-travel", String(Math.max(-1, Math.min(1, travel))));
+      setProperty(page, "--scene-travel", String(Math.max(-1, Math.min(1, travel))));
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
     const onPointer = (event: PointerEvent) => {
@@ -74,13 +94,18 @@ export function AstraExperience() {
     const onTilt = (event: Event) => {
       const input = (event as CustomEvent<{ x: number; y: number; active: boolean }>).detail;
       const active = input?.active && !motion.matches && !finePointer.matches && sceneVisible && !document.hidden;
-      page.dataset.deviceTilt = String(Boolean(active));
+      const tiltState = String(Boolean(active));
+      if (page.dataset.deviceTilt !== tiltState) page.dataset.deviceTilt = tiltState;
       if (!active) { resetPointer(); return; }
       target.x = input.x; target.y = input.y;
       if (!pointerFrame) pointerFrame = requestAnimationFrame(animatePointer);
     };
     window.addEventListener("astra:device-tilt", onTilt);
-    const onPointerOut = (event: PointerEvent) => { if (!event.relatedTarget) resetPointer(); };
+    const onPointerOut = (event: PointerEvent) => {
+      // Touch generates pointerout at the end of each gesture; it is not the
+      // mouse leaving the page and must not reset the current device tilt.
+      if (event.pointerType !== "touch" && !event.relatedTarget) resetPointer();
+    };
     motion.addEventListener("change", resetPointer);
     finePointer.addEventListener("change", resetPointer);
     document.addEventListener("visibilitychange", resetPointer);
@@ -105,7 +130,10 @@ export function AstraExperience() {
       document.removeEventListener("visibilitychange", resetPointer);
       document.removeEventListener("pointerout", onPointerOut);
       window.removeEventListener("blur", resetPointer);
-      for (const property of ["--scene-x", "--scene-y", "--scene-travel", "--opening-depth-opacity", "--opening-travel", "--light-x", "--light-y"]) page.style.removeProperty(property);
+      for (const surface of [...depthSurfaces, ...lightSurfaces]) {
+        for (const property of ["--scene-x", "--scene-y", "--light-x", "--light-y"]) surface.style.removeProperty(property);
+      }
+      for (const property of ["--scene-travel", "--opening-depth-opacity", "--opening-travel"]) page.style.removeProperty(property);
     };
   }, []);
 

@@ -5,6 +5,7 @@ import { AstraExperience } from "@/components/astra/AstraExperience";
 import { DeviceTiltControl } from "@/components/astra/DeviceTiltControl";
 import { OpeningDepthLayers } from "@/components/astra/OpeningDepthLayers";
 import lowerStyles from "@/components/astra/astra-lower.module.css";
+import { prepareLiquidScene } from "@/lib/liquid-readiness";
 import { LiquidModel } from "@/components/astra/LiquidModel";
 import { PawTrail } from "@/components/astra/PawTrail";
 import {
@@ -75,7 +76,6 @@ const PRO_ATMOSPHERE_END = 32.25;
 const PRO_PROOF_WALL_ACTIVE_START = 30.5;
 const PRO_PROOF_WALL_ACTIVE_END = 32.49;
 const METAMASK_SCROLL_DURATION_SECONDS = 1;
-const INITIAL_READINESS_BUDGET_MS = 2800;
 const SITE_REVEAL_BUDGET_MS = 3200;
 const PRO_MATERIAL_LOOP_LEAD_SECONDS = 0.055;
 const PRO_MATERIAL_LOOP_RESTART_SECONDS = 0.18;
@@ -1464,6 +1464,9 @@ function LiquidReferenceHeroV7Sequence({
   const viewportRestoreRef = useRef<{ referenceTime: number; afterSequence: number | null } | null>(null);
   const [layoutRevision, setLayoutRevision] = useState(0);
   const [modelFailed, setModelFailed] = useState(false);
+  const [modelAttempt, setModelAttempt] = useState(0);
+  const [loadingProblem, setLoadingProblem] = useState<"slow" | "error" | null>(null);
+  const handleModelError = useCallback(() => setLoadingProblem("error"), []);
   const useLiquidModel = import.meta.env.VITE_LIQUID_3D !== "0" && !modelFailed;
   const [videoFailed, setVideoFailed] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
@@ -1993,6 +1996,9 @@ function LiquidReferenceHeroV7Sequence({
       // timeline and scroll position; width changes still rebuild for rotation.
       && (nativeTouchViewport || window.innerHeight === layoutHeight);
     let disposed = false;
+    const readinessAbort = new AbortController();
+    stage.dataset.revealState = "pending";
+    runtime.inert = true;
     let siteRevealTimeline: gsap.core.Timeline | null = null;
     let runtimeCleanup: (() => void) | undefined;
     let debugHandle: NonNullable<Window["__LIQUID_V7_DEBUG__"]> | undefined;
@@ -2258,6 +2264,7 @@ function LiquidReferenceHeroV7Sequence({
       };
 
       const markReady = () => {
+        runtime.inert = false;
         stage.dataset.motionReady = "true";
         stage.dataset.motionMode = reducedMotion ? "reduced" : "normal";
       };
@@ -2393,12 +2400,23 @@ function LiquidReferenceHeroV7Sequence({
           .call(() => { stage.dataset.revealBeat = "content"; }, [], 0.94);
       });
 
+      const waitForSceneAssets = () => prepareLiquidScene(stage, {
+        imageUrls: useLiquidModel ? initialImageUrls.filter(url => !url.includes("/mascot/")) : initialImageUrls,
+        needsModel: useLiquidModel,
+        signal: readinessAbort.signal,
+        onProgress: setLoadingProgress,
+        onSlow: () => { if (!disposed) setLoadingProblem("slow"); },
+      }).then(degraded => {
+        if (!disposed) setLoadingProblem(null);
+        return degraded;
+      });
+      const showLoadingError = () => { if (!disposed) setLoadingProblem("error"); };
+
       if (reducedMotion) {
         mascot.dataset.referenceTime = "0";
         video?.pause();
         try { if (video) video.currentTime = 0; } catch { /* metadata may not be ready */ }
-        setLoadingProgress(100);
-        gsap.set(runtime, { autoAlpha: 1 });
+        gsap.set(runtime, { autoAlpha: 0 });
         gsap.set(openingField, { autoAlpha: 1, clipPath: "inset(0 0 0 0)" });
         gsap.set(planes, { autoAlpha: 1 });
         gsap.set(headlineRig, { xPercent: -50, autoAlpha: 1, scale: 1 });
@@ -2430,8 +2448,9 @@ function LiquidReferenceHeroV7Sequence({
         );
         setAnimatedControlsInteractive(cards, false);
         setAnimatedControlsInteractive(proofCardElements, false);
-        markReady();
-        completeSiteReveal();
+        void waitForSceneAssets().then(() => {
+          if (!disposed) completeStaticReveal("reduced");
+        }).catch(showLoadingError);
         return;
       }
 
@@ -3734,53 +3753,8 @@ function LiquidReferenceHeroV7Sequence({
       }
 
       const syncAndReveal = async () => {
-        const startedAt = performance.now();
-        const totalAssets = initialImageUrls.length + 1;
-        let completedAssets = 0;
-        let readinessDegraded = false;
-        const advance = () => {
-          completedAssets += 1;
-          if (!disposed) {
-            setLoadingProgress(Math.min(99, Math.round((completedAssets / totalAssets) * 100)));
-          }
-        };
-        const settleReadinessTask = (task: Promise<void>) => new Promise<void>((resolve) => {
-          let settled = false;
-          const finish = (degraded: boolean) => {
-            if (settled) return;
-            settled = true;
-            window.clearTimeout(timeout);
-            readinessDegraded ||= degraded;
-            advance();
-            resolve();
-          };
-          const timeout = window.setTimeout(() => finish(true), INITIAL_READINESS_BUDGET_MS);
-          void task.then(() => finish(false), () => finish(true));
-        });
-        const waitForImage = (url: string) => settleReadinessTask(new Promise<void>((resolve, reject) => {
-          const image = new window.Image();
-          image.onload = () => resolve();
-          image.onerror = () => reject(new Error(`Unable to load ${url}`));
-          image.src = url;
-          if (image.complete) {
-            if (image.naturalWidth > 0) resolve();
-            else reject(new Error(`Unable to load ${url}`));
-          }
-        }));
-        const fontsReady = "fonts" in document
-          ? document.fonts.ready.then(() => undefined)
-          : Promise.resolve();
-
         try {
-          await Promise.all([
-            settleReadinessTask(fontsReady),
-            ...initialImageUrls.map(waitForImage),
-          ]);
-          if (disposed) return;
-          const remainingHold = Math.max(0, 420 - (performance.now() - startedAt));
-          if (remainingHold) {
-            await new Promise<void>((resolve) => window.setTimeout(resolve, remainingHold));
-          }
+          const readinessDegraded = await waitForSceneAssets();
           if (disposed) return;
           if (
             useSafariMascotVideo === false
@@ -3847,6 +3821,12 @@ function LiquidReferenceHeroV7Sequence({
           updateDebug();
         } catch {
           if (disposed) return;
+          // A failed 3D load is not a successful reveal. Offer an explicit retry
+          // or a visitor-selected fallback instead of silently showing old Liquid.
+          if (useLiquidModel && stage.querySelector<HTMLElement>("[data-liquid-model]")?.dataset.ready !== "true") {
+            showLoadingError();
+            return;
+          }
           siteRevealTimeline?.kill();
           try { setInitialState(); } catch { /* expose the CSS-backed opening below */ }
           completeStaticReveal("initialization-fallback");
@@ -3863,7 +3843,9 @@ function LiquidReferenceHeroV7Sequence({
             immediate: true,
           },
         }));
-        completeStaticReveal("viewport-restored");
+        void waitForSceneAssets().then(() => {
+          if (!disposed) completeStaticReveal("viewport-restored");
+        }).catch(showLoadingError);
         const restoredTime = viewportRestore.afterSequence === null ? viewportRestore.referenceTime : REFERENCE_PINNED_END;
         timeline.totalTime(restoredTime, false);
         if (restoredTime <= 0.001) setInitialState();
@@ -3923,6 +3905,7 @@ function LiquidReferenceHeroV7Sequence({
 
     return () => {
       disposed = true;
+      readinessAbort.abort();
       window.removeEventListener("scroll", rememberScroll);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pageshow", onPageShow);
@@ -3940,7 +3923,7 @@ function LiquidReferenceHeroV7Sequence({
       runtimeCleanup?.();
       context.revert();
     };
-  }, [prefersReducedMotion, useSafariMascotVideo, useLiquidModel, layoutRevision]);
+  }, [prefersReducedMotion, useSafariMascotVideo, useLiquidModel, layoutRevision, modelAttempt]);
 
   useEffect(() => {
     if (!V7_MEDIA_RUNTIME_SURFACES.phone) return;
@@ -4682,7 +4665,8 @@ function LiquidReferenceHeroV7Sequence({
           <span aria-atomic="true" aria-live="polite" className={styles.srOnly} lang="en" role="status">
             {loadingProgress === 100
               ? "Your lesson space is ready."
-              : "Your English is taking shape. Preparing your lesson space, motion and materials."}
+              : loadingProblem === "error" ? "Interactive Liquid could not load. Retry or continue without 3D."
+                : "Preparing your lesson space and interactive Liquid."}
           </span>
           <div
             className={styles.preinitFrame}
@@ -4699,7 +4683,7 @@ function LiquidReferenceHeroV7Sequence({
             </div>
             <div className={styles.loaderPanel} lang="en">
               <strong>YOUR ENGLISH<br />TAKES SHAPE.</strong>
-              <p>Preparing your lesson space, motion and materials.</p>
+              <p>Loading your lesson space and interactive Liquid.</p>
               <div className={styles.loaderStatus}>
                 <div className={styles.loaderProgress}>
                   <i style={{ transform: `scaleX(${loadingProgress / 100})` }} />
@@ -4708,6 +4692,20 @@ function LiquidReferenceHeroV7Sequence({
               </div>
             </div>
           </div>
+
+          {loadingProblem && (loadingProgress < 100 || loadingProblem === "error") && (
+            <div className={styles.loadingRecovery} role="status" lang="en">
+              <p>{loadingProblem === "error"
+                ? "Liquid could not load. Please retry."
+                : "Still loading interactive Liquid. The page will open when it is ready."}</p>
+              <button type="button" onClick={() => {
+                setLoadingProblem(null); setLoadingProgress(0); setModelAttempt(attempt => attempt + 1);
+              }}>Retry loading</button>
+              <button type="button" onClick={() => {
+                setLoadingProblem(null); setLoadingProgress(0); setModelFailed(true);
+              }}>Continue without 3D</button>
+            </div>
+          )}
 
           <div
             aria-hidden="true"
@@ -5416,7 +5414,7 @@ function LiquidReferenceHeroV7Sequence({
                   data-video-failed={videoFailed ? "true" : "false"}
                   data-video-ready={videoReady ? "true" : "false"}
                 >
-                  {useLiquidModel ? <LiquidModel onError={setModelFailed} /> : (<>
+                  {useLiquidModel ? <LiquidModel key={modelAttempt} attempt={modelAttempt} onError={handleModelError} /> : (<>
                   <div
                     className={`${styles.mediaCanvas} ${styles.posterCanvas}`}
                     style={mascotRenderer === "alpha-video"
