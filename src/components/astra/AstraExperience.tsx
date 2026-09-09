@@ -76,12 +76,15 @@ export function AstraExperience() {
       if (!sceneVisible) resetPointer();
       const nextOpeningVisible = time < 10.7 && sceneVisible;
       if (openingVisible !== nextOpeningVisible) { openingVisible = nextOpeningVisible; writePointer(); }
-      sequence.dataset.astraOpening = time < 0.9 ? "true" : "false";
-      setProperty(page, "--opening-depth-opacity", String(Math.max(0, Math.min(1, (10.7 - time) / 1.5))));
-      setProperty(page, "--opening-travel", String(Math.max(0, Math.min(1, time / 10.7))));
+      const openingState = time < 0.9 ? "true" : "false";
+      if (sequence.dataset.astraOpening !== openingState) sequence.dataset.astraOpening = openingState;
       const travel = time >= 19.85 && time < 23 ? (time - 21.5) * 0.55
         : time >= 25.34 && time < 27.75 ? (time - 26.45) * 0.75 : 0;
-      setProperty(page, "--scene-travel", String(Math.max(-1, Math.min(1, travel))));
+      // Only desktop side cards consume this scroll offset. Updating it on
+      // <main> during touch scrolling restyled the entire page for no visual gain.
+      for (const card of page.querySelectorAll<HTMLElement>(`.${styles.cardDepthRig}`)) {
+        setProperty(card, "--scene-travel", finePointer.matches ? String(Math.max(-1, Math.min(1, travel))) : "0");
+      }
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
     const onPointer = (event: PointerEvent) => {
@@ -131,9 +134,8 @@ export function AstraExperience() {
       document.removeEventListener("pointerout", onPointerOut);
       window.removeEventListener("blur", resetPointer);
       for (const surface of [...depthSurfaces, ...lightSurfaces]) {
-        for (const property of ["--scene-x", "--scene-y", "--light-x", "--light-y"]) surface.style.removeProperty(property);
+        for (const property of ["--scene-x", "--scene-y", "--scene-travel", "--light-x", "--light-y"]) surface.style.removeProperty(property);
       }
-      for (const property of ["--scene-travel", "--opening-depth-opacity", "--opening-travel"]) page.style.removeProperty(property);
     };
   }, []);
 
