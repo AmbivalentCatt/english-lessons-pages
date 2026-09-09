@@ -4,7 +4,7 @@ import { createLiquidAtmosphere } from './atmosphere.js';
 
 // Adapted from the user's selected 4189/animation preview. The exported model,
 // textures, lid corrections, eye alignment and attention springs are preserved.
-export function mountLiquidModel(stage, { onError }) {
+export function mountLiquidModel(stage, { onError, prefetchedModel }) {
  const asset = name => new URL(name, import.meta.url).href;
  // The web mesh preserves the eye/lid geometry and both animation clips.
  // The full authoring mesh remains available separately; it costs 48 MB to load.
@@ -204,7 +204,9 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   for(let attempt=0;attempt<2;attempt++){
    try{
     stage.dataset.loadAttempt=String(attempt+1);
-    const response=await fetch(asset(name),{signal:abort.signal,cache:attempt?'reload':'default',priority:'high'});
+    const response=attempt===0&&prefetchedModel?.url===asset(name)
+     ?await prefetchedModel.response
+     :await fetch(asset(name),{signal:abort.signal,cache:attempt?'reload':'default',priority:'high'});
     if(!response.ok)throw new Error(`Liquid model unavailable (${response.status})`);
     // Some hosts supply Content-Encoding themselves, which fetch already decodes.
     let received=0;
@@ -259,7 +261,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
  await renderer.compileAsync(scene,camera);
  if(disposed)return;
  ready=true;
-  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-web6';
+  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-web7';
  resize();wake();
 
  trackResources(model);

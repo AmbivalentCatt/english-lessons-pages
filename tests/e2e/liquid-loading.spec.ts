@@ -5,8 +5,10 @@ for (const reduced of [false, true]) {
     test.setTimeout(90_000);
     if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
     let release!: () => void;
+    let modelRequests = 0;
     const delayed = new Promise<void>(resolve => { release = resolve; });
     await page.route(/Liquid-animated.*\.glb(?:\.gz)?$/, async route => {
+      modelRequests++;
       await delayed;
       await route.continue();
     });
@@ -38,6 +40,7 @@ for (const reduced of [false, true]) {
     await expect(stage).toHaveAttribute('data-reveal-state', 'complete', { timeout: 60_000 });
     await expect(model).toHaveAttribute('data-ready', 'true');
     await expect(model).toHaveAttribute('data-load-state', 'ready');
+    expect(modelRequests).toBe(1);
     const evidence = await page.evaluate(() => (window as unknown as Window & { revealEvidence: { state: string; ready: string }[] }).revealEvidence);
     expect(evidence.length).toBeGreaterThan(0);
     expect(evidence.every(e => e.ready === 'true')).toBe(true);
