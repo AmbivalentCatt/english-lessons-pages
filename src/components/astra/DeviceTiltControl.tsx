@@ -7,7 +7,7 @@ type OrientationAPI = typeof DeviceOrientationEvent & {
   requestPermission?: () => Promise<"granted" | "denied">;
 };
 
-/** Optional sensor input; the existing scene and mascot controllers own motion. */
+/** Optional sensor input; the existing background and card controllers own motion. */
 export function DeviceTiltControl() {
   const [available, setAvailable] = useState(false);
   const [state, setState] = useState<"off" | "pending" | "on" | "denied">("off");
@@ -79,7 +79,7 @@ export function DeviceTiltControl() {
   if (!available) return null;
   return <button type="button" className={styles.control} onClick={toggle}
     aria-label="Наклон устройства" aria-pressed={state === "on"} disabled={state === "pending"}
-    title={state === "denied" ? "Доступ к движению не разрешён. Можно повторить запрос." : "Наклоняйте телефон: Liquid, фон и карточки мягко следуют за движением."}
+    title={state === "denied" ? "Доступ к движению не разрешён. Можно повторить запрос." : "Наклоняйте телефон: Фон и карточки мягко следуют за движением."}
     data-device-tilt-control={state} lang="ru">
     {state === "on" ? "Наклон включён" : state === "pending" ? "Разрешить наклон…" : state === "denied" ? "Наклон недоступен" : "Включить наклон"}
   </button>;

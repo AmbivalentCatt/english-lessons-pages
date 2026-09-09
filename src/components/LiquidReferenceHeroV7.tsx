@@ -1463,11 +1463,10 @@ function LiquidReferenceHeroV7Sequence({
   const sequenceContractStateRef = useRef<V7SequenceState | null>(null);
   const viewportRestoreRef = useRef<{ referenceTime: number; afterSequence: number | null } | null>(null);
   const [layoutRevision, setLayoutRevision] = useState(0);
-  const [modelFailed, setModelFailed] = useState(false);
   const [modelAttempt, setModelAttempt] = useState(0);
   const [loadingProblem, setLoadingProblem] = useState<"slow" | "error" | null>(null);
   const handleModelError = useCallback(() => setLoadingProblem("error"), []);
-  const useLiquidModel = import.meta.env.VITE_LIQUID_3D !== "0" && !modelFailed;
+  const useLiquidModel = import.meta.env.VITE_LIQUID_3D !== "0";
   const [videoFailed, setVideoFailed] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [gazeVideoFailed, setGazeVideoFailed] = useState(false);
@@ -4667,7 +4666,7 @@ function LiquidReferenceHeroV7Sequence({
           <span aria-atomic="true" aria-live="polite" className={styles.srOnly} lang="en" role="status">
             {loadingProgress === 100
               ? "Your lesson space is ready."
-              : loadingProblem === "error" ? "Interactive Liquid could not load. Retry or continue without 3D."
+              : loadingProblem === "error" ? "Interactive Liquid could not load. Please retry."
                 : "Preparing your lesson space and interactive Liquid."}
           </span>
           <div
@@ -4703,9 +4702,6 @@ function LiquidReferenceHeroV7Sequence({
               <button type="button" onClick={() => {
                 setLoadingProblem(null); setLoadingProgress(0); setModelAttempt(attempt => attempt + 1);
               }}>Retry loading</button>
-              <button type="button" onClick={() => {
-                setLoadingProblem(null); setLoadingProgress(0); setModelFailed(true);
-              }}>Continue without 3D</button>
             </div>
           )}
 

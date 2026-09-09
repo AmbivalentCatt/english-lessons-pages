@@ -27,11 +27,12 @@ export function mountLiquidModel(stage, { onError, prefetchedModel }) {
  const resources=new Set(),bitmaps=new Set(),abort=new AbortController();
  let disposed=false,ready=false,raf=0,previous=performance.now(),elapsed=0,stageVisible=true,dirty=true;
  let renderWidth=0,renderHeight=0,lastScroll=0;
- let model,mixer,clips=[],action,headBone,pointerPosition=null,pointerInside=false,deviceTilt=null;
+ let model,mixer,clips=[],action,headBone,pointerPosition=null,pointerInside=false;
  let followWeight=0,followWeightVelocity=0,followBlink=null,followBlinkIndex=0,nextFollowBlink=3.9,previousIdleTime=0;
  const cursorHead=new THREE.Vector2(),cursorHeadVelocity=new THREE.Vector2(),lookVelocity=new THREE.Vector2();
  const eyeAnchors=new Map(),idlePose=[];
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+ const touch=matchMedia('(pointer: coarse)');
  const rig=stage.closest('[data-liquid-motion-rig]');
  const atmosphere=createLiquidAtmosphere(stage,rig);
  const idleBlinkEvents=[[4.88,.11,.026,.21,1],[8.3,.12,.035,.19,1],[10.49,.14,.055,.17,1],[15.56,.1,.035,.19,1],[18.41,.12,.025,.2,1],[19.76,.105,.018,.19,.82],[24.62,.12,.025,.2,1],[30.25,.11,.028,.22,1]];
@@ -44,22 +45,18 @@ export function mountLiquidModel(stage, { onError, prefetchedModel }) {
  function fail(error){if(disposed)return;stage.dataset.ready='false';stage.dataset.error='true';onError(error);}
  function resize(){if(disposed)return;const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);camera.aspect=w/(h*viewportScale);camera.updateProjectionMatrix();dirty=true;wake();}
  function measurePointer(){
-  if(deviceTilt&&!reduced.matches){pointer.set(deviceTilt.x,deviceTilt.y);pointerInside=true;return;}
   const wasInside=pointerInside,r=stage.getBoundingClientRect();
   // Screen coordinates are recomputed as the existing scroll rig moves/scales.
   // Keep this layer transparent to clicks and touch scrolling on the site.
   const margin=Math.max(220,Math.min(420,r.width*.75));
   const dx=pointerPosition?pointerPosition.x-(r.left+r.width/2):0,dy=pointerPosition?pointerPosition.y-(r.top+r.height/2):0;
-  pointerInside=!!pointerPosition&&!reduced.matches&&r.width>0&&r.height>0&&Math.hypot(dx/(r.width/2+margin),dy/(r.height/2+margin))<=1;
+  pointerInside=!!pointerPosition&&!touch.matches&&!reduced.matches&&r.width>0&&r.height>0&&Math.hypot(dx/(r.width/2+margin),dy/(r.height/2+margin))<=1;
   if(pointerInside)pointer.set(THREE.MathUtils.clamp((pointerPosition.x-r.left)/r.width*2-1,-1,1),THREE.MathUtils.clamp((pointerPosition.y-r.top)/r.height*2-1,-1,1));
   else{pointer.set(0,0);if(wasInside&&ready){action.time=0;previousIdleTime=0;}}
  }
- function tiltChanged(event){
-  const input=event.detail;
-  deviceTilt=input?.active&&Number.isFinite(input.x)&&Number.isFinite(input.y)?{x:THREE.MathUtils.clamp(input.x,-.65,.65),y:THREE.MathUtils.clamp(input.y,-.65,.65)}:null;
-  dirty=true;if(stageVisible)wake();
- }
- function pointerMove(e){if(e.pointerType==='touch')return;pointerPosition={x:e.clientX,y:e.clientY};dirty=true;wake();}
+ // Phones keep the exported acting animation. Device tilt belongs to the
+ // background/card controller and must not blend over Liquid's natural pose.
+ function pointerMove(e){if(touch.matches||e.pointerType==='touch')return;pointerPosition={x:e.clientX,y:e.clientY};dirty=true;wake();}
  function pointerLeave(){pointerPosition=null;dirty=true;wake();}
  function wake(){if(!disposed&&!raf){previous=performance.now();raf=requestAnimationFrame(frame);}}
  function invalidate(){dirty=true;wake();}
@@ -72,7 +69,7 @@ export function mountLiquidModel(stage, { onError, prefetchedModel }) {
  });intersection.observe(stage);
  const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(stage);
  window.addEventListener('pointermove',pointerMove,{passive:true});
- window.addEventListener('astra:device-tilt',tiltChanged);
+ touch.addEventListener('change',pointerLeave);
  document.documentElement.addEventListener('pointerleave',pointerLeave);
  window.addEventListener('blur',pointerLeave);
  window.addEventListener('scroll',scrollChanged,{passive:true});
@@ -261,7 +258,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
  await renderer.compileAsync(scene,camera);
  if(disposed)return;
  ready=true;
-  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-web7';
+  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-web8';
  resize();wake();
 
  trackResources(model);
@@ -291,7 +288,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   stage.dataset.eyeX=look.x.toFixed(3);stage.dataset.eyeY=look.y.toFixed(3);stage.dataset.yaw=pivot.rotation.y.toFixed(3);
   stage.dataset.followWeight=followWeight.toFixed(3);stage.dataset.pointerInside=String(pointerInside);
   stage.dataset.headQuaternion=headBone.quaternion.toArray().map(x=>x.toFixed(5)).join(',');
-  stage.dataset.paused=String(reduced.matches);stage.dataset.mode=deviceTilt?'tilt':'follow';
+  stage.dataset.paused=String(reduced.matches);stage.dataset.mode=touch.matches?'idle':'follow';
   if(!reduced.matches||dirty){renderer.render(scene,camera);dirty=false;stage.dataset.ready='true';stage.dataset.loadState='ready';stage.dataset.loadProgress='100';}
   if(!reduced.matches)raf=requestAnimationFrame(frame);
  }
@@ -300,7 +297,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   if(disposed)return;disposed=true;abort.abort();cancelAnimationFrame(raf);
   intersection.disconnect();resizeObserver.disconnect();
   window.removeEventListener('pointermove',pointerMove);document.documentElement.removeEventListener('pointerleave',pointerLeave);
-  window.removeEventListener('astra:device-tilt',tiltChanged);
+  touch.removeEventListener('change',pointerLeave);
   window.removeEventListener('blur',pointerLeave);window.removeEventListener('scroll',scrollChanged);
   document.removeEventListener('visibilitychange',invalidate);reduced.removeEventListener('change',invalidate);
   renderer.domElement.removeEventListener('webglcontextlost',contextLost);

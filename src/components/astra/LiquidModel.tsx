@@ -16,7 +16,7 @@ export function LiquidModel({ onError, attempt }: { onError: () => void; attempt
     let disposed = false;
     let model: ModelHandle | undefined;
     // Absolute URL keeps the self-contained module on Vite's static-asset route.
-    const runtimeUrl = new URL("/media/liquid-3d/runtime.js?v=web7", window.location.href).href;
+    const runtimeUrl = new URL("/media/liquid-3d/runtime.js?v=web8", window.location.href).href;
     // Fetch alongside the module graph. Passing the same response to the
     // renderer avoids Safari downloading a fetch-preloaded model a second time.
     const download = new AbortController();

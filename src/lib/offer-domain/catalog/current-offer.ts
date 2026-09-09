@@ -152,20 +152,20 @@ export const CURRENT_OFFER: OfferCatalog = Object.freeze({
 });
 
 export const CURRENT_AVAILABILITY_SNAPSHOT: AvailabilitySnapshot = Object.freeze({
-  snapshotId: "availability-20260901-basic-slot-confirmed-2-of-5",
+  snapshotId: "availability-20260909-all-tariffs-confirmed-2-0-2",
   unit: "remaining-active-student-places",
   source: "manual-user-approved-ledger",
-  verifiedAt: "2026-09-01T20:32:16+03:00",
+  verifiedAt: "2026-09-09T15:13:37+03:00",
   freshnessDays: 7,
   capacities: Object.freeze({ basic: 5, standard: 7, premium: 4 }),
   remaining: Object.freeze({ basic: 2, standard: 0, premium: 2 }),
 });
 
-// User confirmations apply only to the named tariff; BASIC retains its original date.
+// The user explicitly reconfirmed all three counts on 9 September 2026.
 export const CURRENT_AVAILABILITY_VERIFIED_AT_BY_TARIFF = Object.freeze({
   basic: CURRENT_AVAILABILITY_SNAPSHOT.verifiedAt,
-  standard: "2026-09-09T12:12:36+03:00",
-  premium: "2026-09-08T09:28:00.554+03:00",
+  standard: CURRENT_AVAILABILITY_SNAPSHOT.verifiedAt,
+  premium: CURRENT_AVAILABILITY_SNAPSHOT.verifiedAt,
 });
 
 export const CURRENT_CAPACITY_TOTAL = Object.values(CURRENT_AVAILABILITY_SNAPSHOT.capacities)

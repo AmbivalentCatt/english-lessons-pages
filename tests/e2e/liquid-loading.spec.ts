@@ -57,6 +57,7 @@ test('failed module load offers a working retry instead of silently showing old 
   await expect(page.getByText('Liquid could not load. Please retry.', { exact: true })).toBeVisible();
   await expect(page.locator('[data-motion-ready]')).toHaveAttribute('data-reveal-state', 'pending');
   await expect(page.locator('[data-liquid-model]')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Continue without 3D', exact: true })).toHaveCount(0);
   fail = false;
   await page.getByRole('button', { name: 'Retry loading', exact: true }).click();
   await expect(page.locator('[data-reveal-state=complete]')).toBeVisible({ timeout: 60_000 });

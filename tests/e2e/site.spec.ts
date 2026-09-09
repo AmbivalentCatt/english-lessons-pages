@@ -51,6 +51,18 @@ test("loads interactive Liquid and retains it through the tariff journey", async
   await expect(model).toHaveAttribute("data-model-quality", "web");
   await expect(model).toHaveAttribute("data-clips", "Liquid_Idle,Liquid_Gaze");
   await expect(page.locator('[data-reveal-state="complete"]')).toBeVisible();
+  if (!isMobile) {
+    const rect = await model.boundingBox();
+    expect(rect).not.toBeNull();
+    // The hero intentionally begins partly below the viewport. Use the visible
+    // canvas area so the pointer reaches the document on shorter desktops too.
+    const visibleTop = Math.max(0, rect!.y);
+    const visibleBottom = Math.min(page.viewportSize()!.height, rect!.y + rect!.height);
+    await page.mouse.move(rect!.x + rect!.width * .8, (visibleTop + visibleBottom) / 2);
+    await expect(model).toHaveAttribute('data-mode', 'follow');
+    await expect.poll(() => model.getAttribute('data-follow-weight').then(Number)).toBeGreaterThan(.9);
+    await expect.poll(() => model.getAttribute('data-eye-x').then(Number)).toBeGreaterThan(.4);
+  }
   for (const time of [21.8, 26.6, 28.2, 31.4, 21.8]) {
     await page.evaluate(referenceTime => {
       window.dispatchEvent(new CustomEvent("liquid-v7:navigate-to-reference", {
@@ -60,6 +72,9 @@ test("loads interactive Liquid and retains it through the tariff journey", async
     await expect.poll(() => page.locator("[data-liquid-motion-rig]").evaluate(el => Number((el as HTMLElement).dataset.referenceTime))).toBeCloseTo(time, 1);
     await expect(model).toHaveAttribute("data-ready", "true");
     await expect(model).toHaveAttribute("data-paused", "false");
+    const tariff = time === 21.8 ? 0 : time === 26.6 ? 1 : 2;
+    await expect(page.locator('[class*=phoneAvailability]').nth(tariff)).toContainText(String([2, 0, 2][tariff]));
+    await expect(page.locator('[class*=phoneAvailability]').nth(tariff)).not.toContainText('Нет свежих');
   }
   const stage = page.locator("[data-motion-ready]");
   expect(await stage.evaluate(el => getComputedStyle(el).overflow)).toBe("clip");
@@ -171,7 +186,7 @@ test("has no horizontal document overflow at the active viewport", async ({ page
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("opt-in phone tilt drives existing depth and Liquid, then resets safely", async ({ page, isMobile }, testInfo) => {
+test("phone Liquid plays naturally while opt-in tilt drives all five cards", async ({ page, isMobile }, testInfo) => {
   test.skip(!isMobile, "Device sensors are offered only on touch devices.");
   // Controlled sensor/permission input; this is not a physical-device sensor test.
   await page.addInitScript(() => {
@@ -193,13 +208,20 @@ test("opt-in phone tilt drives existing depth and Liquid, then resets safely", a
     dispatchEvent(event);
   }, { beta, gamma });
   await send(45, 0);
-  await expect(model).toHaveAttribute('data-mode', 'follow');
+  await expect(model).toHaveAttribute('data-mode', 'idle');
+  const initialTime = Number(await model.getAttribute('data-clip-time'));
+  const initialHead = await model.getAttribute('data-head-quaternion');
   await control.tap();
   await expect(control).toHaveAttribute('aria-pressed', 'true');
   await send(45, 0); // Calibrate to the visitor's current grip.
   await send(48, 16);
-  await expect(model).toHaveAttribute('data-mode', 'tilt');
-  await expect.poll(() => model.getAttribute('data-eye-x').then(Number)).toBeGreaterThan(.25);
+  await expect(model).toHaveAttribute('data-mode', 'idle');
+  await expect.poll(() => model.getAttribute('data-clip-time').then(Number)).toBeGreaterThan(initialTime + .3);
+  await expect(model).not.toHaveAttribute('data-head-quaternion', initialHead!);
+  await page.mouse.move(300, 300); // Compatibility mouse input must not interrupt phone acting.
+  await expect(model).toHaveAttribute('data-pointer-inside', 'false');
+  await expect(model).toHaveAttribute('data-follow-weight', '0.000');
+  await expect(model).toHaveAttribute('data-eye-x', '0.000');
   await expect.poll(() => page.locator('[class*=phoneDepthRig]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeGreaterThan(.4);
   await page.evaluate(() => dispatchEvent(new CustomEvent('liquid-v7:navigate-to-reference', {
     detail: { referenceTime: 21.8, immediate: true },
@@ -222,6 +244,8 @@ test("opt-in phone tilt drives existing depth and Liquid, then resets safely", a
   await page.screenshot({ path: testInfo.outputPath('phone-five-cards-tilt-right.png') });
   await send(43, -16);
   await expect.poll(async () => (await transforms()).every(matrix => matrix.x < -1.5)).toBe(true);
+  await expect(model).toHaveAttribute('data-mode', 'idle');
+  await expect(model).toHaveAttribute('data-follow-weight', '0.000');
   await page.screenshot({ path: testInfo.outputPath('phone-five-cards-tilt-left.png') });
   await page.evaluate(() => dispatchEvent(new CustomEvent('liquid-v7:navigate-to-reference', {
     detail: { referenceTime: 31.4, immediate: true },
@@ -242,7 +266,7 @@ test("opt-in phone tilt drives existing depth and Liquid, then resets safely", a
   await expect.poll(() => page.locator('[class*=phoneDepthRig]').evaluate(el => Number((el as HTMLElement).style.getPropertyValue('--scene-x')))).toBeCloseTo(.65, 2);
   await control.tap();
   await expect(control).toHaveAttribute('aria-pressed', 'false');
-  await expect(model).toHaveAttribute('data-mode', 'follow');
+  await expect(model).toHaveAttribute('data-mode', 'idle');
   await send(20, 60);
   await expect(page.locator('[data-liquid-v7-main]')).toHaveAttribute('data-device-tilt', 'false');
   await control.tap();
