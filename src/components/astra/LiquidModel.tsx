@@ -16,7 +16,7 @@ export function LiquidModel({ onError, attempt }: { onError: () => void; attempt
     let disposed = false;
     let model: ModelHandle | undefined;
     // Absolute URL keeps the self-contained module on Vite's static-asset route.
-    const runtimeUrl = new URL("/media/liquid-3d/runtime.js?v=mobile5", window.location.href).href;
+    const runtimeUrl = new URL("/media/liquid-3d/runtime.js?v=web6", window.location.href).href;
     host.dataset.loadState = "importing";
     host.dataset.loadProgress = "2";
     const attemptUrl = attempt ? `${runtimeUrl}&retry=${attempt}` : runtimeUrl;

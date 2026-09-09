@@ -6,10 +6,11 @@ import { createLiquidAtmosphere } from './atmosphere.js';
 // textures, lid corrections, eye alignment and attention springs are preserved.
 export function mountLiquidModel(stage, { onError }) {
  const asset = name => new URL(name, import.meta.url).href;
- const compactDevice=matchMedia('(pointer: coarse)').matches||/iPad|iPhone|iPod/.test(navigator.userAgent);
- const modelName=compactDevice?'Liquid-animated-mobile-v2.glb':'Liquid-animated.glb';
- const compressedName=compactDevice?`${modelName}.gz`:'Liquid-animated-v1.glb.gz';
- stage.dataset.modelQuality=compactDevice?'mobile':'full';
+ // The web mesh preserves the eye/lid geometry and both animation clips.
+ // The full authoring mesh remains available separately; it costs 48 MB to load.
+ const modelName='Liquid-animated-mobile-v2.glb';
+ const compressedName=`${modelName}.gz`;
+ stage.dataset.modelQuality='web';
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.NoToneMapping;
@@ -203,7 +204,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
   for(let attempt=0;attempt<2;attempt++){
    try{
     stage.dataset.loadAttempt=String(attempt+1);
-    const response=await fetch(asset(name),{signal:abort.signal,cache:attempt?'reload':'default'});
+    const response=await fetch(asset(name),{signal:abort.signal,cache:attempt?'reload':'default',priority:'high'});
     if(!response.ok)throw new Error(`Liquid model unavailable (${response.status})`);
     // Some hosts supply Content-Encoding themselves, which fetch already decodes.
     let received=0;
@@ -226,7 +227,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
    try{buffer=await fetchModel(compressedName,true);}
    catch(error){if(disposed||error.name==='AbortError')throw error;}
   }
-  // The exact source GLB remains a compatibility fallback for older browsers.
+  // The uncompressed web GLB remains a compatibility fallback for older browsers.
   buffer??=await fetchModel(modelName);
   if(disposed)return;
   stage.dataset.loadState='parsing';stage.dataset.loadProgress='78';
@@ -258,7 +259,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
  await renderer.compileAsync(scene,camera);
  if(disposed)return;
  ready=true;
-  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-mobile5';
+  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-web6';
  resize();wake();
 
  trackResources(model);

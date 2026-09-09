@@ -48,7 +48,7 @@ test("loads interactive Liquid and retains it through the tariff journey", async
   await page.goto("./");
   const model = page.locator("[data-liquid-model]");
   await expect(model).toHaveAttribute("data-ready", "true", { timeout: 60_000 });
-  await expect(model).toHaveAttribute("data-model-quality", isMobile ? "mobile" : "full");
+  await expect(model).toHaveAttribute("data-model-quality", "web");
   await expect(model).toHaveAttribute("data-clips", "Liquid_Idle,Liquid_Gaze");
   await expect(page.locator('[data-reveal-state="complete"]')).toBeVisible();
   for (const time of [21.8, 26.6, 28.2, 31.4, 21.8]) {

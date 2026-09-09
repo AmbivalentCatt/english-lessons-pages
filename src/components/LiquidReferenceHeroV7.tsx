@@ -2720,7 +2720,9 @@ function LiquidReferenceHeroV7Sequence({
       const setInitialState = () => {
         mascot.dataset.referenceTime = "0";
         contractStateCache = null;
-        gsap.set(runtime, { autoAlpha: 1 });
+        // Initial geometry can be prepared while the model downloads, but only
+        // the readiness/reveal controller may expose the interactive scene.
+        gsap.set(runtime, { autoAlpha: stage.dataset.motionReady === "true" ? 1 : 0 });
         gsap.set(openingField, {
           autoAlpha: 1,
           clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",

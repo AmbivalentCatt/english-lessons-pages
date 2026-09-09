@@ -32,6 +32,7 @@ for (const reduced of [false, true]) {
       await expect(stage).toHaveAttribute('data-reveal-state', 'pending');
       await expect(model).toHaveAttribute('data-ready', 'false');
       await expect(page.locator('[class*=runtime]').first()).toHaveAttribute('inert', '');
+      await expect(page.locator('[class*=runtime]').first()).toHaveCSS('opacity', '0');
       await page.screenshot({ path: testInfo.outputPath('waiting-for-liquid.png') });
     } finally { release(); }
     await expect(stage).toHaveAttribute('data-reveal-state', 'complete', { timeout: 60_000 });
