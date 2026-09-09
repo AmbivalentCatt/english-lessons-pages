@@ -34,7 +34,7 @@ export function mountLiquidModel(stage, { onError }) {
  const rig=stage.closest('[data-liquid-motion-rig]');
  const atmosphere=createLiquidAtmosphere(stage,rig);
  const idleBlinkEvents=[[4.88,.11,.026,.21,1],[8.3,.12,.035,.19,1],[10.49,.14,.055,.17,1],[15.56,.1,.035,.19,1],[18.41,.12,.025,.2,1],[19.76,.105,.018,.19,.82],[24.62,.12,.025,.2,1],[30.25,.11,.028,.22,1]];
- function setContourField(data){const texture=new THREE.DataTexture(new Float32Array(data.values),data.width,2,THREE.RGBAFormat,THREE.FloatType);texture.minFilter=texture.magFilter=THREE.LinearFilter;texture.needsUpdate=true;contourField.value=texture;resources.add(texture);}
+ function setContourField(data){const texture=new THREE.DataTexture(new Float32Array(data.values),data.width,2,THREE.RGBAFormat,THREE.FloatType);texture.minFilter=texture.magFilter=THREE.NearestFilter;texture.needsUpdate=true;contourField.value=texture;resources.add(texture);}
  function trackResources(object){object.traverse(o=>{
   if(o.geometry)resources.add(o.geometry);if(o.skeleton)resources.add(o.skeleton);
   for(const material of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){resources.add(material);for(const value of Object.values(material))if(value?.isTexture){resources.add(value);if(value.source?.data?.close)bitmaps.add(value.source.data);}}
@@ -118,12 +118,22 @@ function applyWebsiteMotion(dt,time){
  return websiteBlink(dt,time);
 }
 
-const contourGLSL=`
+// RGBA32F linear filtering needs OES_texture_float_linear, which iPhone GPUs
+// may not expose. Interpolate exact float texels in the shader instead: an
+// incomplete filtered texture returns zero bounds and paints over both pupils.
+const contourLookupGLSL=`
 uniform sampler2D liquidContourField;
+vec4 liquidContourBounds(float x){
+ float column=clamp((abs(x)-0.043)/0.190,0.0,1.0)*255.0;
+ float left=floor(column),row=x>=0.0?0.25:0.75;
+ vec4 a=texture2D(liquidContourField,vec2((left+0.5)/256.0,row));
+ vec4 b=texture2D(liquidContourField,vec2((min(left+1.0,255.0)+0.5)/256.0,row));
+ return mix(a,b,fract(column));
+}`;
+const contourGLSL=contourLookupGLSL+`
 uniform sampler2D liquidRimPaint;
 vec4 baselineBounds(vec3 p){
- float u=(clamp((abs(p.x)-0.043)/0.190,0.0,1.0)*255.0+0.5)/256.0;
- return texture2D(liquidContourField,vec2(u,p.x>=0.0?0.25:0.75));
+ return liquidContourBounds(p.x);
 }
 vec4 movingBounds(vec4 original,float x){
  float t=clamp((abs(x)-0.058)/0.161,0.0,1.0);
@@ -167,10 +177,9 @@ float cavityLining=smoothstep(0.10,0.17,liquidLidLocal.z);
 };material.customProgramCacheKey=()=> 'liquid-opening-boundary-lid-'+drawRim+'-'+innerSocket;}
 function eyeApertureMaterial(material){material.onBeforeCompile=s=>{
  s.uniforms.liquidContourField=contourField;s.uniforms.liquidPaintProjection=paintProjection;
- s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D liquidContourField; uniform vec3 liquidPaintProjection;').replace('#include <map_fragment>',`#include <map_fragment>
+ s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 liquidPaintProjection;'+contourLookupGLSL).replace('#include <map_fragment>',`#include <map_fragment>
  vec2 rest=vec2((vMapUv.x-liquidPaintProjection.y)/liquidPaintProjection.x,((1.0-vMapUv.y)-liquidPaintProjection.z)/liquidPaintProjection.x);
- float u=(clamp((abs(rest.x)-0.043)/0.190,0.0,1.0)*255.0+0.5)/256.0;
- vec4 a=texture2D(liquidContourField,vec2(u,rest.x>=0.0?0.25:0.75));
+ vec4 a=liquidContourBounds(rest.x);
  // Continue the unobstructed upper iris/pupil colour beneath the lid.
  // A cream upper replacement created a false white outline in neutral.
  float safeY=min(rest.y,a.r-0.0045);
@@ -237,7 +246,7 @@ function aimEyes(gx,gy){model.updateMatrixWorld(true);for(const bone of eyeBones
  if(!idle||!headBone||eyeBones.length!==2||!closedPaint.value||!rimPaint.value||!contourField.value)throw new Error('Liquid rig is incomplete');
  action=mixer.clipAction(idle);action.play();
  cacheClipPose();ready=true;stage.dataset.clips=clips.map(c=>c.name).join(',');
-  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-mobile3';
+  stage.dataset.revision='natural-motion-round4-framing2-atmosphere1-mobile4';
  resize();wake();
 
  trackResources(model);
