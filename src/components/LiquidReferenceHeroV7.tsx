@@ -921,7 +921,7 @@ const phoneUiCards = [
     progress: "22%",
     meta: availabilityLabel("basic"),
     detail: "Школа · разбор присланного материала на уроке.",
-    artwork: "/media/phone-tier-artwork/basic-coral-apricot.png",
+    artwork: "/media/phone-tier-artwork/basic-coral-apricot.webp",
     artworkPosition: "50% 50%",
     loopVideo: "/media/phone-tier-animation/basic-loop-pass-1.mp4",
     mobileLoopVideo: "/media/phone-tier-animation/basic-loop-pass-1-mobile-safari.mp4",
@@ -934,7 +934,7 @@ const phoneUiCards = [
     progress: "52%",
     meta: availabilityLabel("standard"),
     detail: "Школа / GoGetter · speaking · отчёт каждые 4 урока.",
-    artwork: "/media/phone-tier-artwork/standard-cyan-blue.png",
+    artwork: "/media/phone-tier-artwork/standard-cyan-blue.webp",
     artworkPosition: "82% 50%",
     loopVideo: "/media/phone-tier-animation/standard-loop-pass-2.mp4",
     mobileLoopVideo: "/media/phone-tier-animation/standard-loop-pass-2-mobile-safari.mp4",
@@ -947,7 +947,7 @@ const phoneUiCards = [
     progress: "78%",
     meta: availabilityLabel("premium"),
     detail: "Трекинг · отчёт после каждого урока.",
-    artwork: "/media/phone-tier-artwork/pro-deep-violet.png",
+    artwork: "/media/phone-tier-artwork/pro-deep-violet.webp",
     artworkPosition: "50% 50%",
     introVideo: "/media/phone-tier-animation/pro-intro-pass-1.mp4",
     mobileIntroVideo: "/media/phone-tier-animation/pro-intro-pass-1-mobile-safari.mp4",
@@ -1002,23 +1002,23 @@ const materialCurrentClipPair = (progress: number) => {
 };
 
 const proofCards = [
-  { label: "PRO · ДЛИТЕЛЬНОСТЬ", value: "60", detail: "МИНУТ", artwork: "/media/pro-proof-artwork/duration-pearl-v4.png", detailIndex: 1 },
-  { label: "PRO · ПАКЕТ", value: "4 · 6 000 ₽", detail: "ЗАНЯТИЯ", artwork: "/media/pro-proof-artwork/format-pearl-v4.png", detailIndex: 0 },
-  { label: "PRO · ПАКЕТ", value: "8 · 11 400 ₽", detail: "ЗАНЯТИЙ", artwork: "/media/pro-proof-artwork/support-pearl-v4.png", detailIndex: 0 },
-  { label: "PRO · РАСПИСАНИЕ", value: "ПРИОРИТЕТ", detail: "ПОСТОЯННОЕ ВРЕМЯ", artwork: "/media/pro-proof-artwork/priority-pearl-v4.png", detailIndex: 2 },
+  { label: "PRO · ДЛИТЕЛЬНОСТЬ", value: "60", detail: "МИНУТ", artwork: "/media/pro-proof-artwork/duration-pearl-v4.webp", detailIndex: 1 },
+  { label: "PRO · ПАКЕТ", value: "4 · 6 000 ₽", detail: "ЗАНЯТИЯ", artwork: "/media/pro-proof-artwork/format-pearl-v4.webp", detailIndex: 0 },
+  { label: "PRO · ПАКЕТ", value: "8 · 11 400 ₽", detail: "ЗАНЯТИЙ", artwork: "/media/pro-proof-artwork/support-pearl-v4.webp", detailIndex: 0 },
+  { label: "PRO · РАСПИСАНИЕ", value: "ПРИОРИТЕТ", detail: "ПОСТОЯННОЕ ВРЕМЯ", artwork: "/media/pro-proof-artwork/priority-pearl-v4.webp", detailIndex: 2 },
 ] as const;
 
 const violetUtilities = [
-  { id: "basic-duration", value: "45–50", label: "BASIC · МИН", artwork: "/media/tier-utility-artwork-v2/basic-duration-material.png" },
-  { id: "school", value: "ШКОЛА", label: "ПОМОЩЬ С Д/З", artwork: "/media/generated-backgrounds/transition-coral-cyan-b.png" },
-  { id: "quizlet", value: "QUIZLET", label: "STANDARD · PRO", artwork: "/media/v7-generated/quizlet-utility-material.png" },
-  { id: "standard-duration", value: "50–55", label: "STANDARD · МИН", artwork: "/media/tier-utility-artwork-v2/standard-duration-material.png" },
-  { id: "chatgpt-pro", value: "CHATGPT PRO", label: "STANDARD · PRO", artwork: "/media/v7-generated/chatgpt-pro-hero-utility-v2.png" },
-  { id: "codex", value: "CODEX", label: "STANDARD · PRO", artwork: "/media/v7-generated/codex-utility-material.png" },
-  { id: "pro-duration", value: "60", label: "PRO · МИН", artwork: "/media/tier-utility-artwork-v2/pro-duration-material.png" },
-  { id: "speaking", value: "SPEAKING", label: "CHATGPT LIVE · STANDARD · PRO", artwork: "/media/v7-generated/speaking-live-voice-orbit-v3.png" },
-  { id: "tracking", value: "TRACKING", label: "REPORTS · STANDARD / 4 · PRO / EACH", artwork: "/media/tier-utility-artwork-v2/pro-duration-material.png" },
-  { id: "claude", value: "CLAUDE", label: "PREPARATION · MATERIALS", artwork: "/media/generated-backgrounds/transition-coral-cyan-b.png" },
+  { id: "basic-duration", value: "45–50", label: "BASIC · МИН", artwork: "/media/tier-utility-artwork-v2/basic-duration-material.webp" },
+  { id: "school", value: "ШКОЛА", label: "ПОМОЩЬ С Д/З", artwork: "/media/generated-backgrounds/transition-coral-cyan-b.webp" },
+  { id: "quizlet", value: "QUIZLET", label: "STANDARD · PRO", artwork: "/media/v7-generated/quizlet-utility-material.webp" },
+  { id: "standard-duration", value: "50–55", label: "STANDARD · МИН", artwork: "/media/tier-utility-artwork-v2/standard-duration-material.webp" },
+  { id: "chatgpt-pro", value: "CHATGPT PRO", label: "STANDARD · PRO", artwork: "/media/v7-generated/chatgpt-pro-hero-utility-v2.webp" },
+  { id: "codex", value: "CODEX", label: "STANDARD · PRO", artwork: "/media/v7-generated/codex-utility-material.webp" },
+  { id: "pro-duration", value: "60", label: "PRO · МИН", artwork: "/media/tier-utility-artwork-v2/pro-duration-material.webp" },
+  { id: "speaking", value: "SPEAKING", label: "CHATGPT LIVE · STANDARD · PRO", artwork: "/media/v7-generated/speaking-live-voice-orbit-v3.webp" },
+  { id: "tracking", value: "TRACKING", label: "REPORTS · STANDARD / 4 · PRO / EACH", artwork: "/media/tier-utility-artwork-v2/pro-duration-material.webp" },
+  { id: "claude", value: "CLAUDE", label: "PREPARATION · MATERIALS", artwork: "/media/generated-backgrounds/transition-coral-cyan-b.webp" },
 ] as const;
 
 const flowStorySteps = [
@@ -1028,7 +1028,7 @@ const flowStorySteps = [
     summary: "Basic — 45–50 минут, Standard — 50–55 минут, PRO — 60 минут.",
     visualTitle: "BASIC · STANDARD · PRO",
     visualMeta: "45–50 · 50–55 · 60 МИН",
-    artwork: "/media/phone-tier-artwork/standard-cyan-blue.png",
+    artwork: "/media/phone-tier-artwork/standard-cyan-blue.webp",
     visualKind: "formats",
   },
   {
@@ -1037,7 +1037,7 @@ const flowStorySteps = [
     summary: "Грамматика, школьные задания, speaking и подготовка к проверочным собираются вокруг цели ученика; цифровые инструменты помогают подготовить материал.",
     visualTitle: "ПОД ЦЕЛЬ УЧЕНИКА",
     visualMeta: "ГРАММАТИКА · SPEAKING · ШКОЛА",
-    artwork: "/media/standard-proof-artwork/materials-v3.png",
+    artwork: "/media/standard-proof-artwork/materials-v3.webp",
     visualKind: "materials",
   },
   {
@@ -1046,7 +1046,7 @@ const flowStorySteps = [
     summary: "Выберите тариф, оставьте контакты и расскажите о цели занятий — так мы согласуем подходящий формат и первый урок.",
     visualTitle: "ПЕРВЫЙ УРОК",
     visualMeta: "ТАРИФ · ЦЕЛЬ · КОНТАКТ",
-    artwork: "/media/v7-generated/booking-request-story-v1.png",
+    artwork: "/media/v7-generated/booking-request-story-v1.webp",
     visualKind: "booking",
   },
 ] as const;
@@ -1154,7 +1154,7 @@ const faqItems = [
 ] as const;
 
 const initialImageUrls = Array.from(new Set([
-  "/media/v7-generated/frog-opening-field.png",
+  "/media/v7-generated/frog-opening-field.webp",
   "/media/mascot/Liquid_cat_poster_alpha_decontaminated.png",
 ]));
 
@@ -4661,7 +4661,7 @@ function LiquidReferenceHeroV7Sequence({
             // Clipping must not create a nested scroll container on iOS.
             overflow: "clip",
             isolation: "isolate",
-            background: "url('/media/tier-scene-artwork/basic-material-field.png') center / cover",
+            background: "url('/media/tier-scene-artwork/basic-material-field.webp') center / cover",
           }}
         >
           <span aria-atomic="true" aria-live="polite" className={styles.srOnly} lang="en" role="status">
@@ -5293,7 +5293,7 @@ function LiquidReferenceHeroV7Sequence({
                   onLoadStart={() => setIsProTierAtmosphereReady(false)}
                   onPlaying={() => setIsProTierAtmosphereReady(true)}
                   playsInline
-                  poster="/media/tier-scene-artwork/pro-atmospheric-field.png"
+                  poster="/media/tier-scene-artwork/pro-atmospheric-field.webp"
                   preload="none"
                   ref={proTierAtmosphereVideoRef}
                   tabIndex={-1}
@@ -5925,7 +5925,7 @@ function V7ApplicationDialog({
               onLoadStart={() => setIsProApplicationVideoReady(false)}
               onPlaying={() => setIsProApplicationVideoReady(true)}
               playsInline
-              poster="/media/tier-scene-artwork/pro-atmospheric-field.png"
+              poster="/media/tier-scene-artwork/pro-atmospheric-field.webp"
               preload="metadata"
               ref={proApplicationVideoRef}
               tabIndex={-1}

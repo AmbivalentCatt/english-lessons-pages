@@ -108,7 +108,7 @@ export function OpeningDepthLayers() {
       gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image);
       ready = true; resize(); canvas.dataset.ready = "true";
     };
-    image.src = "/media/v7-generated/frog-opening-field.png";
+    image.src = "/media/v7-generated/frog-opening-field.webp";
     const observer = new ResizeObserver(resize); observer.observe(canvas);
     window.addEventListener("astra:depth-pointer",onPointer);
     document.addEventListener("visibilitychange",draw);
